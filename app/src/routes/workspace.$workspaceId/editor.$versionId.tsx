@@ -36,6 +36,7 @@ function EditorPage() {
       pageSize: PAGE_SIZES.A4,
       margins: DEFAULT_MARGINS,
     })
+    useSignerRolesStore.getState().reset()
   }, [])
 
   // Estado del contenido (preservado entre cambios de page size)

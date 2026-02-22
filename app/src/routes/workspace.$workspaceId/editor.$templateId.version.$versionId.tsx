@@ -60,6 +60,13 @@ function EditorPage() {
   const fetchStartedRef = useRef(false)
   const lastFetchedParamsRef = useRef<string | null>(null)
 
+  // Reset editor stores when navigating between templates/versions
+  // to avoid leaking roles/page config from a previously opened document.
+  useEffect(() => {
+    usePaginationStore.getState().reset()
+    useSignerRolesStore.getState().reset()
+  }, [templateId, versionId])
+
   // Fetch version details from backend
   const fetchVersion = useCallback(async () => {
     setIsLoading(true)
