@@ -73,12 +73,17 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
     new Set(),
   )
 
-  // Load signing page state.
+  // Load signing page state. If the document is being processed (another signer
+  // triggered render), poll until the status advances.
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const data = await getPublicSigningPage(token)
+        let data = await getPublicSigningPage(token)
+        while (!cancelled && data.step === 'processing') {
+          await new Promise((resolve) => setTimeout(resolve, 3_000))
+          data = await getPublicSigningPage(token)
+        }
         if (!cancelled) {
           setPageState({ status: 'loaded', data })
         }
@@ -184,13 +189,19 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
   }, [pageState, agreed, responses, token, validate, t])
 
   // Handle proceed to signing (Path A).
+  // If another signer is already rendering, the backend returns step='processing'.
+  // Retry with backoff until the document is ready.
   const handleProceed = useCallback(async () => {
     if (pageState.status !== 'loaded') return
 
     setPageState({ status: 'proceeding', data: pageState.data })
 
     try {
-      const result = await proceedToSigning(token)
+      let result = await proceedToSigning(token)
+      while (result.step === 'processing') {
+        await new Promise((resolve) => setTimeout(resolve, 3_000))
+        result = await proceedToSigning(token)
+      }
       setPageState({ status: 'loaded', data: result })
     } catch (err) {
       handleSubmitError(err, setPageState, t)

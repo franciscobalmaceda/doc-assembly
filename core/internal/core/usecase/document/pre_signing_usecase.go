@@ -96,11 +96,12 @@ type PublicSigningResponse struct {
 
 // Signing step constants.
 const (
-	StepPreview   = "preview"
-	StepSigning   = "signing"
-	StepWaiting   = "waiting"
-	StepCompleted = "completed"
-	StepDeclined  = "declined"
+	StepPreview    = "preview"
+	StepSigning    = "signing"
+	StepWaiting    = "waiting"
+	StepCompleted  = "completed"
+	StepDeclined   = "declined"
+	StepProcessing = "processing"
 )
 
 // FieldResponseInput represents a single field response from the signer.

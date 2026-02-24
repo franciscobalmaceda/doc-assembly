@@ -98,6 +98,7 @@ const (
 			   created_at, updated_at
 		FROM execution.documents
 		WHERE status = 'PENDING_PROVIDER'
+		  AND updated_at < NOW() - INTERVAL '60 seconds'
 		ORDER BY created_at ASC
 		LIMIT $1
 	`
@@ -142,6 +143,21 @@ const (
 		UPDATE execution.documents
 		SET status = $2, updated_at = NOW()
 		WHERE id = $1
+	`
+
+	// queryClaimForSigning atomically transitions AWAITING_INPUT → PENDING_PROVIDER.
+	// Only one concurrent caller succeeds; losers get zero rows.
+	queryClaimForSigning = `
+		UPDATE execution.documents
+		SET status = 'PENDING_PROVIDER', updated_at = NOW()
+		WHERE id = $1 AND status = 'AWAITING_INPUT'
+		RETURNING id, workspace_id, template_version_id, document_type_id, title,
+				  client_external_reference_id, transactional_id, operation_type,
+				  related_document_id, signer_document_id, signer_provider, status,
+				  injected_values_snapshot, pdf_storage_path, completed_pdf_url,
+				  is_active, superseded_at, superseded_by_document_id, supersede_reason,
+				  expires_at, retry_count, last_retry_at, next_retry_at,
+				  created_at, updated_at
 	`
 
 	queryDelete = `

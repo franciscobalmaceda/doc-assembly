@@ -45,7 +45,7 @@ export interface PreSigningFormData {
  * The `step` field determines which UI to render.
  */
 export interface PublicSigningResponse {
-  step: 'preview' | 'signing' | 'waiting' | 'completed' | 'declined'
+  step: 'preview' | 'signing' | 'waiting' | 'completed' | 'declined' | 'processing'
   form?: PreSigningFormData
   pdfUrl?: string
   embeddedSigningUrl?: string

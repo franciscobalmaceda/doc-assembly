@@ -443,6 +443,18 @@ func (r *Repository) UpdateStatus(ctx context.Context, id string, status entity.
 	return nil
 }
 
+// ClaimForSigning atomically transitions AWAITING_INPUT → PENDING_PROVIDER.
+func (r *Repository) ClaimForSigning(ctx context.Context, id string) (*entity.Document, bool, error) {
+	doc, err := scanDocument(r.pool.QueryRow(ctx, queryClaimForSigning, id))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, false, nil
+		}
+		return nil, false, fmt.Errorf("claiming document for signing: %w", err)
+	}
+	return doc, true, nil
+}
+
 // Delete deletes a document and all its recipients (cascade).
 func (r *Repository) Delete(ctx context.Context, id string) error {
 	result, err := r.pool.Exec(ctx, queryDelete, id)

@@ -77,6 +77,10 @@ type DocumentRepository interface {
 	// UpdateStatus updates only the status of a document.
 	UpdateStatus(ctx context.Context, id string, status entity.DocumentStatus) error
 
+	// ClaimForSigning atomically transitions a document from AWAITING_INPUT to PENDING_PROVIDER.
+	// Returns (doc, true, nil) if the claim succeeded; (nil, false, nil) if already claimed.
+	ClaimForSigning(ctx context.Context, id string) (*entity.Document, bool, error)
+
 	// Delete deletes a document and all its recipients (cascade).
 	Delete(ctx context.Context, id string) error
 

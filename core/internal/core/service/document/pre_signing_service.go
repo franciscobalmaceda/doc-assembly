@@ -122,6 +122,11 @@ func (s *PreSigningService) GetPublicSigningPage(ctx context.Context, token stri
 		return s.buildSigningResponse(ctx, doc, recipient, accessToken, title)
 	}
 
+	// Doc is being rendered/uploaded by another goroutine → tell the signer to retry.
+	if doc.IsPendingProvider() {
+		return s.buildProcessingResponse(doc, recipient, accessToken.Token), nil
+	}
+
 	return nil, fmt.Errorf("document is not in a valid state for signing")
 }
 
@@ -186,39 +191,19 @@ func (s *PreSigningService) ProceedToSigning(ctx context.Context, token string) 
 		return nil, fmt.Errorf("finding recipient: %w", err)
 	}
 
-	// If document is still AWAITING_INPUT, render PDF and upload to provider.
+	// If document is still AWAITING_INPUT, atomically claim and render + upload.
+	// Only one concurrent caller wins the CAS; losers reload and fall through.
 	if doc.IsAwaitingInput() {
-		version, err := s.versionRepo.FindByID(ctx, doc.TemplateVersionID)
-		if err != nil {
-			return nil, fmt.Errorf("finding template version: %w", err)
+		var claimErr error
+		doc, recipient, claimErr = s.claimAndRender(ctx, doc, accessToken)
+		if claimErr != nil {
+			return nil, claimErr
 		}
+	}
 
-		portableDoc, err := parsePortableDocument(version.ContentStructure)
-		if err != nil {
-			return nil, fmt.Errorf("parsing document content: %w", err)
-		}
-
-		fieldResponses := loadFieldResponseMap(ctx, s.fieldResponseRepo, doc.ID)
-
-		if err := s.renderAndSendToProvider(ctx, doc, version, portableDoc, fieldResponses); err != nil {
-			return nil, err
-		}
-
-		// Refresh entities after upload since provider identifiers are persisted
-		// during renderAndSendToProvider.
-		doc, err = s.documentRepo.FindByID(ctx, accessToken.DocumentID)
-		if err != nil {
-			return nil, fmt.Errorf("refreshing document after provider upload: %w", err)
-		}
-		recipient, err = s.recipientRepo.FindByID(ctx, accessToken.RecipientID)
-		if err != nil {
-			return nil, fmt.Errorf("refreshing recipient after provider upload: %w", err)
-		}
-
-		slog.InfoContext(ctx, "document rendered and sent to provider via ProceedToSigning",
-			slog.String("document_id", doc.ID),
-			slog.String("recipient_id", recipient.ID),
-		)
+	// Document is being rendered/uploaded by another goroutine — tell the signer to retry.
+	if doc.IsPendingProvider() && !doc.HasSignerInfo() {
+		return s.buildProcessingResponse(doc, recipient, accessToken.Token), nil
 	}
 
 	if !doc.IsPending() && !doc.IsInProgress() && !doc.IsPendingProvider() {
@@ -232,6 +217,66 @@ func (s *PreSigningService) ProceedToSigning(ctx context.Context, token string) 
 
 	title := documentTitle(doc)
 	return s.buildSigningResponse(ctx, doc, recipient, accessToken, title)
+}
+
+// claimAndRender atomically claims the document for rendering via CAS, then renders and
+// uploads to the signing provider. If another goroutine already claimed it, reloads the
+// current document state. Returns the refreshed document and recipient.
+func (s *PreSigningService) claimAndRender(
+	ctx context.Context,
+	doc *entity.Document,
+	accessToken *entity.DocumentAccessToken,
+) (*entity.Document, *entity.DocumentRecipient, error) {
+	claimedDoc, claimed, err := s.documentRepo.ClaimForSigning(ctx, doc.ID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("claiming document for signing: %w", err)
+	}
+
+	if !claimed {
+		// Another goroutine claimed it. Reload current state.
+		reloaded, err := s.documentRepo.FindByID(ctx, accessToken.DocumentID)
+		if err != nil {
+			return nil, nil, fmt.Errorf("reloading document after concurrent claim: %w", err)
+		}
+		recipient, err := s.recipientRepo.FindByID(ctx, accessToken.RecipientID)
+		if err != nil {
+			return nil, nil, fmt.Errorf("reloading recipient after concurrent claim: %w", err)
+		}
+		return reloaded, recipient, nil
+	}
+
+	doc = claimedDoc
+
+	version, err := s.versionRepo.FindByID(ctx, doc.TemplateVersionID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("finding template version: %w", err)
+	}
+	portableDoc, err := parsePortableDocument(version.ContentStructure)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parsing document content: %w", err)
+	}
+	fieldResponses := loadFieldResponseMap(ctx, s.fieldResponseRepo, doc.ID)
+
+	if err := s.renderAndSendToProvider(ctx, doc, version, portableDoc, fieldResponses); err != nil {
+		return nil, nil, err
+	}
+
+	// Refresh entities after upload since provider identifiers are persisted.
+	doc, err = s.documentRepo.FindByID(ctx, accessToken.DocumentID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("refreshing document after provider upload: %w", err)
+	}
+	recipient, err := s.recipientRepo.FindByID(ctx, accessToken.RecipientID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("refreshing recipient after provider upload: %w", err)
+	}
+
+	slog.InfoContext(ctx, "document rendered and sent to provider via ProceedToSigning",
+		slog.String("document_id", doc.ID),
+		slog.String("recipient_id", recipient.ID),
+	)
+
+	return doc, recipient, nil
 }
 
 // CompleteEmbeddedSigning marks the token as used after embedded signing is completed.
@@ -476,6 +521,23 @@ func (s *PreSigningService) buildPreviewFormResponse(
 	}
 	s.applyAccessFlags(resp, doc, recipient, token)
 	return resp, nil
+}
+
+// buildProcessingResponse returns a "processing" step when the document is being
+// rendered/uploaded and signer info is not yet available.
+func (s *PreSigningService) buildProcessingResponse(
+	doc *entity.Document,
+	recipient *entity.DocumentRecipient,
+	token string,
+) *documentuc.PublicSigningResponse {
+	title := documentTitle(doc)
+	resp := &documentuc.PublicSigningResponse{
+		Step:          documentuc.StepProcessing,
+		DocumentTitle: title,
+		RecipientName: recipient.Name,
+	}
+	s.applyAccessFlags(resp, doc, recipient, token)
+	return resp
 }
 
 // buildPreviewPDFResponse builds a preview response with the PDF URL for on-demand rendering.
@@ -917,11 +979,10 @@ func (s *PreSigningService) renderAndSendToProvider(
 	}
 	doc.SetPDFPath(storagePath)
 
-	if err := doc.MarkAsPendingProvider(); err != nil {
-		return fmt.Errorf("marking document as pending provider: %w", err)
-	}
+	// Status is already PENDING_PROVIDER (set by ClaimForSigning CAS).
+	// Persist the PDF storage path as a durable checkpoint for the background worker.
 	if err := s.documentRepo.Update(ctx, doc); err != nil {
-		return fmt.Errorf("updating document status: %w", err)
+		return fmt.Errorf("persisting PDF storage path: %w", err)
 	}
 
 	return s.uploadToProvider(ctx, doc, recipients, signerRoles, portableDoc, renderResult)
