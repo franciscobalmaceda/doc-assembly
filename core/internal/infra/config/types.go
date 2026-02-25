@@ -20,6 +20,7 @@ type Config struct {
 	Scheduler    SchedulerConfig    `mapstructure:"scheduler"`
 	Notification NotificationConfig `mapstructure:"notification"`
 	PublicAccess PublicAccessConfig `mapstructure:"public_access"`
+	Worker       WorkerConfig       `mapstructure:"worker"`
 
 	// DummyAuthUserID is the internal DB user ID for dummy auth mode.
 	// Set at runtime after seeding the dummy user (not loaded from YAML).
@@ -239,4 +240,18 @@ type PublicAccessConfig struct {
 	RateLimitMax       int `mapstructure:"rate_limit_max"`        // Max access requests per recipient per window
 	RateLimitWindowMin int `mapstructure:"rate_limit_window_min"` // Rate limit window in minutes
 	TokenTTLHours      int `mapstructure:"token_ttl_hours"`       // Access token TTL in hours
+}
+
+// WorkerConfig holds River job queue worker configuration.
+type WorkerConfig struct {
+	Enabled    bool `mapstructure:"enabled"`
+	MaxWorkers int  `mapstructure:"max_workers"`
+}
+
+// MaxWorkersOrDefault returns MaxWorkers if set, otherwise defaults to 10.
+func (w WorkerConfig) MaxWorkersOrDefault() int {
+	if w.MaxWorkers > 0 {
+		return w.MaxWorkers
+	}
+	return 10
 }

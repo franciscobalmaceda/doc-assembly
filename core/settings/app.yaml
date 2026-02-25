@@ -97,6 +97,11 @@ public_access:
   rate_limit_window_min: 60     # DOC_ENGINE_PUBLIC_ACCESS_RATE_LIMIT_WINDOW_MIN - Rate limit window in minutes
   token_ttl_hours: 48           # DOC_ENGINE_PUBLIC_ACCESS_TOKEN_TTL_HOURS - Access token TTL in hours
 
+# River job queue worker configuration
+worker:
+  enabled: false              # DOC_ENGINE_WORKER_ENABLED - Enable River job queue workers
+  max_workers: 10             # DOC_ENGINE_WORKER_MAX_WORKERS - Max concurrent worker goroutines
+
 # Email notification configuration
 notification:
   provider: "noop"   # DOC_ENGINE_NOTIFICATION_PROVIDER - "smtp", "gmail", or "noop"

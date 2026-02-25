@@ -59,6 +59,7 @@ import (
 	"github.com/rendis/doc-assembly/core/internal/frontend"
 	"github.com/rendis/doc-assembly/core/internal/infra/config"
 	"github.com/rendis/doc-assembly/core/internal/infra/registry"
+	"github.com/rendis/doc-assembly/core/internal/infra/riverqueue"
 	"github.com/rendis/doc-assembly/core/internal/infra/scheduler"
 	"github.com/rendis/doc-assembly/core/internal/infra/server"
 )
@@ -68,11 +69,17 @@ type appComponents struct {
 	httpServer  *server.HTTPServer
 	dbPool      *pgxpool.Pool
 	scheduler   *scheduler.Scheduler
+	riverSvc    *riverqueue.RiverService
 	hasFrontend bool
 }
 
 func (a *appComponents) cleanup() {
 	slog.Info("cleaning up resources")
+	if a.riverSvc != nil {
+		if err := a.riverSvc.Stop(context.Background()); err != nil {
+			slog.Error("failed to stop river", slog.Any("error", err))
+		}
+	}
 	a.scheduler.Stop()
 	postgres.Close(a.dbPool)
 	slog.Info("cleanup complete")
@@ -123,7 +130,8 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	documentTypeRepo := documenttyperepo.New(pool)
 
 	// --- Repositories: Execution ---
-	documentRepo := documentrepo.New(pool)
+	documentRepoConcrete := documentrepo.NewConcrete(pool)
+	var documentRepo port.DocumentRepository = documentRepoConcrete
 	documentRecipientRepo := documentrecipientrepo.New(pool)
 	documentEventRepo := documenteventrepo.New(pool)
 	documentFieldResponseRepo := documentfieldresponserepo.New(pool)
@@ -207,13 +215,25 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	eventEmitter := documentsvc.NewEventEmitter(documentEventRepo)
 	publicURL := cfg.Server.PublicURL
 	notificationSvc := documentsvc.NewNotificationService(notificationProvider, documentRecipientRepo, documentRepo, documentAccessTokenRepo, publicURL)
-	documentSvc := documentsvc.NewDocumentService(
+	documentSvcConcrete := documentsvc.NewDocumentService(
 		documentRepo, documentRecipientRepo, templateRepo, templateVersionRepo, templateVersionSignerRoleRepo,
 		pdfRenderer, signingProvider, storageAdapter,
 		eventEmitter, notificationSvc,
 		cfg.Scheduler.ExpirationDays,
 		documentAccessTokenRepo, documentFieldResponseRepo,
 	)
+
+	// --- River Job Queue (optional) ---
+	var riverSvc *riverqueue.RiverService
+	if e.documentCompletedHandler != nil {
+		riverSvc, err = riverqueue.New(ctx, pool, cfg.Worker, e.documentCompletedHandler, documentRepoConcrete)
+		if err != nil {
+			return nil, fmt.Errorf("river: %w", err)
+		}
+		documentSvcConcrete.SetCompletionNotifier(riverSvc.Notifier())
+	}
+
+	var documentSvc documentuc.DocumentUseCase = documentSvcConcrete
 	injectableResolver := injectablesvc.NewInjectableResolverService(injReg)
 	documentGenerator := documentsvc.NewDocumentGenerator(
 		templateRepo, templateVersionRepo, documentRepo, documentRecipientRepo,
@@ -326,6 +346,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		httpServer:  httpServer,
 		dbPool:      pool,
 		scheduler:   sched,
+		riverSvc:    riverSvc,
 		hasFrontend: frontendFS != nil,
 	}, nil
 }

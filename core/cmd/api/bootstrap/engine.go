@@ -45,9 +45,20 @@ type Engine struct {
 	globalMiddleware []gin.HandlerFunc // Applied to all routes (after CORS, before auth)
 	apiMiddleware    []gin.HandlerFunc // Applied to /api/v1/* routes (after auth)
 
+	// Worker
+	documentCompletedHandler port.DocumentCompletedHandler
+
 	// Lifecycle hooks
 	onStartHooks    []func(ctx context.Context) error // Run after config/preflight, before HTTP server
 	onShutdownHooks []func(ctx context.Context) error // Run after HTTP server stops, before exit
+}
+
+// OnDocumentCompleted registers a handler that is called when a document
+// reaches COMPLETED status. The handler runs inside a River job worker,
+// so returning an error causes automatic retry with backoff.
+func (e *Engine) OnDocumentCompleted(fn port.DocumentCompletedHandler) *Engine {
+	e.documentCompletedHandler = fn
+	return e
 }
 
 // New creates a new Engine with default configuration.
@@ -276,6 +287,13 @@ func (e *Engine) runWithSignals(ctx context.Context, app *appComponents) error {
 
 	// Start background scheduler
 	app.scheduler.Start(ctx)
+
+	// Start River job queue workers (if configured)
+	if app.riverSvc != nil {
+		if err := app.riverSvc.Start(ctx); err != nil {
+			return fmt.Errorf("river: %w", err)
+		}
+	}
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)

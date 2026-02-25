@@ -31,7 +31,7 @@ func NewDocumentService(
 	expirationDays int,
 	accessTokenRepo port.DocumentAccessTokenRepository,
 	fieldResponseRepo port.DocumentFieldResponseRepository,
-) documentuc.DocumentUseCase {
+) *DocumentService {
 	return &DocumentService{
 		documentRepo:      documentRepo,
 		recipientRepo:     recipientRepo,
@@ -64,6 +64,25 @@ type DocumentService struct {
 	expirationDays    int
 	accessTokenRepo   port.DocumentAccessTokenRepository
 	fieldResponseRepo port.DocumentFieldResponseRepository
+
+	completionNotifier port.DocumentCompletionNotifier
+}
+
+// SetCompletionNotifier sets the notifier used for transactional document
+// completion processing. When set, completed documents are persisted and
+// enqueued atomically.
+func (s *DocumentService) SetCompletionNotifier(n port.DocumentCompletionNotifier) {
+	s.completionNotifier = n
+}
+
+// persistDocUpdate persists a document update. For completed documents with
+// a configured notifier, it uses PersistAndNotify for transactional atomicity.
+// Otherwise it falls back to the standard repository update.
+func (s *DocumentService) persistDocUpdate(ctx context.Context, doc *entity.Document) error {
+	if doc.IsCompleted() && s.completionNotifier != nil {
+		return s.completionNotifier.PersistAndNotify(ctx, doc)
+	}
+	return s.documentRepo.Update(ctx, doc)
 }
 
 // CreateAndSendDocument creates a document, generates the PDF, and sends it for signing.
@@ -378,7 +397,7 @@ func (s *DocumentService) updateDocumentFromStatus(ctx context.Context, doc *ent
 		doc.SetCompletedPDFURL(*statusResult.CompletedPDFURL)
 	}
 
-	if err := s.documentRepo.Update(ctx, doc); err != nil {
+	if err := s.persistDocUpdate(ctx, doc); err != nil {
 		return fmt.Errorf("updating document: %w", err)
 	}
 
@@ -505,7 +524,7 @@ func (s *DocumentService) processDocumentStatusFromWebhook(ctx context.Context, 
 		}
 	}
 
-	if err := s.documentRepo.Update(ctx, doc); err != nil {
+	if err := s.persistDocUpdate(ctx, doc); err != nil {
 		return fmt.Errorf("updating document: %w", err)
 	}
 
@@ -541,17 +560,45 @@ func (s *DocumentService) updateDocumentStatusFromRecipient(ctx context.Context,
 	switch recipientStatus {
 	case entity.RecipientStatusSigned:
 		allSigned, err := s.recipientRepo.AllSigned(ctx, doc.ID)
-		if err != nil || !allSigned {
+		if err != nil {
+			slog.WarnContext(ctx, "failed to check all-signed status",
+				slog.String("document_id", doc.ID),
+				slog.String("error", err.Error()),
+			)
 			return
 		}
-		if err := doc.MarkAsCompleted(); err == nil {
-			_ = s.documentRepo.Update(ctx, doc)
-			s.downloadAndStorePDF(ctx, doc)
+		if !allSigned {
+			return
 		}
+		if err := doc.MarkAsCompleted(); err != nil {
+			slog.WarnContext(ctx, "failed to mark document as completed",
+				slog.String("document_id", doc.ID),
+				slog.String("error", err.Error()),
+			)
+			return
+		}
+		if err := s.persistDocUpdate(ctx, doc); err != nil {
+			slog.WarnContext(ctx, "failed to persist completed document",
+				slog.String("document_id", doc.ID),
+				slog.String("error", err.Error()),
+			)
+			return
+		}
+		s.downloadAndStorePDF(ctx, doc)
 
 	case entity.RecipientStatusDeclined:
-		if err := doc.MarkAsDeclined(); err == nil {
-			_ = s.documentRepo.Update(ctx, doc)
+		if err := doc.MarkAsDeclined(); err != nil {
+			slog.WarnContext(ctx, "failed to mark document as declined",
+				slog.String("document_id", doc.ID),
+				slog.String("error", err.Error()),
+			)
+			return
+		}
+		if err := s.documentRepo.Update(ctx, doc); err != nil {
+			slog.WarnContext(ctx, "failed to persist declined document",
+				slog.String("document_id", doc.ID),
+				slog.String("error", err.Error()),
+			)
 		}
 	}
 }

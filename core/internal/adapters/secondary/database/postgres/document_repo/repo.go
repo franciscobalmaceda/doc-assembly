@@ -6,14 +6,27 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/rendis/doc-assembly/core/internal/core/entity"
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 )
 
+// DBTX is satisfied by both *pgxpool.Pool and pgx.Tx, allowing shared
+// query implementations across regular and transactional paths.
+type DBTX interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+}
+
 // New creates a new document repository.
 func New(pool *pgxpool.Pool) port.DocumentRepository {
+	return NewConcrete(pool)
+}
+
+// NewConcrete creates a new document repository returning the concrete type.
+// Use this when you need access to transactional methods like UpdateTx.
+func NewConcrete(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
@@ -392,9 +405,19 @@ func (r *Repository) FindErrorsForRetry(ctx context.Context, maxRetries, limit i
 	return documents, nil
 }
 
-// Update updates a document.
+// Update updates a document using the connection pool.
 func (r *Repository) Update(ctx context.Context, document *entity.Document) error {
-	result, err := r.pool.Exec(ctx, queryUpdate,
+	return r.updateWith(ctx, r.pool, document)
+}
+
+// UpdateTx updates a document within an existing transaction.
+func (r *Repository) UpdateTx(ctx context.Context, tx pgx.Tx, document *entity.Document) error {
+	return r.updateWith(ctx, tx, document)
+}
+
+// updateWith is the shared implementation for both Update and UpdateTx.
+func (r *Repository) updateWith(ctx context.Context, db DBTX, document *entity.Document) error {
+	result, err := db.Exec(ctx, queryUpdate,
 		document.ID,
 		document.DocumentTypeID,
 		document.Title,

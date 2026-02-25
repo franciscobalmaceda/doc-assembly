@@ -130,7 +130,30 @@ type InjectableDataType = entity.InjectableDataType
 // DocumentStatus represents the lifecycle state of a document.
 type DocumentStatus = entity.DocumentStatus
 
+// Document status constants.
+const (
+	DocumentStatusDraft           = entity.DocumentStatusDraft
+	DocumentStatusAwaitingInput   = entity.DocumentStatusAwaitingInput
+	DocumentStatusPendingProvider = entity.DocumentStatusPendingProvider
+	DocumentStatusPending         = entity.DocumentStatusPending
+	DocumentStatusInProgress      = entity.DocumentStatusInProgress
+	DocumentStatusCompleted       = entity.DocumentStatusCompleted
+	DocumentStatusDeclined        = entity.DocumentStatusDeclined
+	DocumentStatusVoided          = entity.DocumentStatusVoided
+	DocumentStatusExpired         = entity.DocumentStatusExpired
+	DocumentStatusError           = entity.DocumentStatusError
+)
+
 // --- Recipient Status Enum ---
 
 // RecipientStatus represents the signing state of a recipient.
 type RecipientStatus = entity.RecipientStatus
+
+// Recipient status constants.
+const (
+	RecipientStatusPending   = entity.RecipientStatusPending
+	RecipientStatusSent      = entity.RecipientStatusSent
+	RecipientStatusDelivered = entity.RecipientStatusDelivered
+	RecipientStatusSigned    = entity.RecipientStatusSigned
+	RecipientStatusDeclined  = entity.RecipientStatusDeclined
+)

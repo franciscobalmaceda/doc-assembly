@@ -1,0 +1,45 @@
+// Document completion ports for the River worker queue.
+// See docs/backend/worker-queue-guide.md for the full completion flow.
+package port
+
+import (
+	"context"
+	"time"
+
+	"github.com/rendis/doc-assembly/core/internal/core/entity"
+)
+
+// DocumentCompletionNotifier persists the document and enqueues a completion
+// job atomically within the same database transaction.
+type DocumentCompletionNotifier interface {
+	PersistAndNotify(ctx context.Context, doc *entity.Document) error
+}
+
+// DocumentCompletedHandler is the user-provided callback invoked when a
+// document reaches COMPLETED status. Returning an error causes River to
+// retry the job automatically.
+type DocumentCompletedHandler func(ctx context.Context, event DocumentCompletedEvent) error
+
+// DocumentCompletedEvent carries all relevant data about a completed document.
+type DocumentCompletedEvent struct {
+	DocumentID    string
+	ExternalID    *string
+	Title         *string
+	Status        entity.DocumentStatus
+	WorkspaceCode string
+	TenantCode    string
+	CreatedAt     time.Time
+	UpdatedAt     *time.Time
+	ExpiresAt     *time.Time
+	Recipients    []CompletedRecipient
+}
+
+// CompletedRecipient holds signer information within a completed document event.
+type CompletedRecipient struct {
+	RoleName    string
+	SignerOrder int
+	Name        string
+	Email       string
+	Status      entity.RecipientStatus
+	SignedAt    *time.Time
+}
