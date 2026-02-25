@@ -173,11 +173,37 @@ func TestMyRepo_Operation(t *testing.T) {
 
 ### Background Workers (River)
 
-Document completion events are processed via [River](https://riverqueue.com), a PostgreSQL-native job queue. When all recipients sign a document, the status update and job enqueue happen atomically in a single transaction.
+Document completion events are processed via [River](https://riverqueue.com), a PostgreSQL-native job queue that runs inside the same Go process. No external broker needed.
+
+**Transactional guarantee:** The document status update (`COMPLETED`) and job enqueue happen in a **single PostgreSQL transaction** via `PersistAndNotify`. This prevents orphaned states on crashes.
+
+**Flow:**
+```
+Webhook → DocumentService.persistDocUpdate()
+  → completionNotifier != nil && doc.IsCompleted()
+    → Notifier.PersistAndNotify(ctx, doc)
+      → BEGIN TX → UPDATE doc status → INSERT river_job → COMMIT
+  → else: plain documentRepo.Update(ctx, doc)
+```
+
+**Deduplication:** `ByArgs` + `ByPeriod(1h)` — same document_id produces at most 1 job per hour.
+**Error handling:** Handler errors → exponential backoff retries. Panics → recovered, treated as error.
+
+**SDK handler example:**
+```go
+handler := func(ctx context.Context, ev sdk.DocumentCompletedEvent) error {
+    log.Printf("Doc %s completed: %d recipients", ev.DocumentID, len(ev.Recipients))
+    return nil // return error to retry
+}
+```
 
 **Key files:**
 
 - `internal/infra/riverqueue/` — River client, notifier, worker, job args
+  - `client.go` — `RiverService` lifecycle (New, Start, Stop, Notifier)
+  - `notifier.go` — `PersistAndNotify` transactional enqueue
+  - `worker.go` — `DocumentCompletedWorker` builds event from DB, calls handler
+  - `args.go` — `DocumentCompletedArgs` with Kind() and dedup InsertOpts()
 - `internal/core/port/document_completion.go` — `DocumentCompletionNotifier`, `DocumentCompletedHandler`
 - `sdk/worker.go` — Re-exported types for SDK consumers
 
@@ -187,7 +213,7 @@ Document completion events are processed via [River](https://riverqueue.com), a 
 go test -C core -tags=integration -run TestRiver -v -count=1 ./internal/infra/riverqueue/
 ```
 
-Tests cover: happy path, transactional atomicity, panic/error recovery, dedup, concurrent race, orphaned jobs.
+9 tests cover: happy path, transactional atomicity, panic/error recovery, handler error retry, dedup, nil notifier fallback, concurrent webhook race, double completion idempotency, orphaned job.
 
 **Documentation:** [`docs/backend/worker-queue-guide.md`](docs/backend/worker-queue-guide.md)
 

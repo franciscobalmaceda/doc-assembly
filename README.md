@@ -15,6 +15,7 @@ Go 1.25 &middot; React 19 &middot; PostgreSQL 16 &middot; Typst
 - [Available Commands](#available-commands)
 - [Configuration](#configuration)
 - [Digital Signatures](#digital-signatures)
+- [Background Workers (River)](#background-workers-river)
 - [Database](#database)
 - [Deployment](#deployment)
 - [Documentation](#documentation)
@@ -245,6 +246,58 @@ This starts:
 - **PostgreSQL** for Documenso on port `5433`
 
 Configure the webhook in Documenso to point to `http://host.docker.internal:8080/webhooks/signing/documenso`.
+
+## Background Workers (River)
+
+When all recipients sign a document, the system needs to notify SDK consumers asynchronously. This is powered by [River](https://riverqueue.com), a PostgreSQL-native job queue that runs inside the same Go process — no external broker (Redis, RabbitMQ) needed.
+
+### Why River?
+
+The critical requirement is **transactional atomicity**: the document status update (`COMPLETED`) and the job enqueue happen in a **single PostgreSQL transaction**. This guarantees no "completed document without job" or "job without completed document" — even on crashes.
+
+```plaintext
+Signing Provider webhook
+  -> DocumentService: all recipients signed
+    -> BEGIN transaction
+      -> UPDATE document SET status = 'COMPLETED'
+      -> INSERT INTO river_job (document_completed args)
+    -> COMMIT
+  -> River Worker (async): polls job, builds event, invokes SDK handler
+```
+
+### SDK Usage
+
+```go
+import "github.com/rendis/doc-assembly/core/sdk"
+
+handler := func(ctx context.Context, ev sdk.DocumentCompletedEvent) error {
+    log.Printf("Document %s completed in tenant %s", ev.DocumentID, ev.TenantCode)
+    for _, r := range ev.Recipients {
+        log.Printf("  %s (%s) signed at %v", r.Name, r.RoleName, r.SignedAt)
+    }
+    return nil // return error to retry
+}
+```
+
+### Key Properties
+
+| Property | Behavior |
+|----------|----------|
+| **Atomicity** | Status update + job enqueue in single transaction |
+| **Deduplication** | Same document produces at most 1 job per hour (`ByArgs` + `ByPeriod`) |
+| **Retries** | Handler errors and panics trigger exponential backoff retries |
+| **Fallback** | Without `SetCompletionNotifier`, plain `repo.Update()` — no jobs enqueued |
+| **Insert-only mode** | `worker.enabled: false` inserts jobs but never processes them |
+
+### Configuration
+
+```yaml
+worker:
+  enabled: false        # DOC_ENGINE_WORKER_ENABLED
+  max_workers: 10       # DOC_ENGINE_WORKER_MAX_WORKERS
+```
+
+For architecture diagrams, SDK type reference, and integration test details, see **[Worker Queue Guide](docs/backend/worker-queue-guide.md)**.
 
 ## Database
 
