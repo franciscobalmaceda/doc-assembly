@@ -23,6 +23,7 @@ func NewDefaultTemplateResolver() port.TemplateResolver {
 }
 
 // Resolve applies tenant/workspace/documentType fallback and requires a published version.
+// When Environment==dev and SandboxWorkspaceCode is set, sandbox workspace is tried first.
 func (r *DefaultTemplateResolver) Resolve(
 	ctx context.Context,
 	req *port.TemplateResolverRequest,
@@ -32,16 +33,40 @@ func (r *DefaultTemplateResolver) Resolve(
 		return nil, fmt.Errorf("template resolver request is nil")
 	}
 
+	return r.resolveWithFallback(ctx, req, adapter)
+}
+
+// resolveWithFallback builds the fallback chain depending on environment.
+func (r *DefaultTemplateResolver) resolveWithFallback(
+	ctx context.Context,
+	req *port.TemplateResolverRequest,
+	adapter port.TemplateVersionSearchAdapter,
+) (*string, error) {
 	published := true
-	fallbacks := []struct {
+
+	type fallbackStep struct {
 		tenantCode     string
 		workspaceCodes []string
 		stage          string
-	}{
-		{tenantCode: req.TenantCode, workspaceCodes: []string{req.WorkspaceCode}, stage: "tenant_workspace"},
-		{tenantCode: req.TenantCode, workspaceCodes: []string{systemWorkspaceCode}, stage: "tenant_system_workspace"},
-		{tenantCode: systemTenantCode, workspaceCodes: []string{systemWorkspaceCode}, stage: "system_system_workspace"},
 	}
+
+	var fallbacks []fallbackStep
+
+	// When dev + sandbox workspace code is set, try sandbox first
+	if req.Environment == entity.EnvironmentDev && req.SandboxWorkspaceCode != "" {
+		fallbacks = append(fallbacks, fallbackStep{
+			tenantCode:     req.TenantCode,
+			workspaceCodes: []string{req.SandboxWorkspaceCode},
+			stage:          "tenant_sandbox_workspace",
+		})
+	}
+
+	// Standard fallback chain (prod or after sandbox miss)
+	fallbacks = append(fallbacks,
+		fallbackStep{tenantCode: req.TenantCode, workspaceCodes: []string{req.WorkspaceCode}, stage: "tenant_workspace"},
+		fallbackStep{tenantCode: req.TenantCode, workspaceCodes: []string{systemWorkspaceCode}, stage: "tenant_system_workspace"},
+		fallbackStep{tenantCode: systemTenantCode, workspaceCodes: []string{systemWorkspaceCode}, stage: "system_system_workspace"},
+	)
 
 	for _, step := range fallbacks {
 		items, err := adapter.SearchTemplateVersions(ctx, port.TemplateVersionSearchParams{

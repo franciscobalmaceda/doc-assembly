@@ -369,7 +369,7 @@ func (s *DocumentService) RefreshDocumentStatus(ctx context.Context, documentID 
 
 	oldStatus := string(doc.Status)
 
-	statusResult, err := s.signingProvider.GetDocumentStatus(ctx, *doc.SignerDocumentID)
+	statusResult, err := s.signingProvider.GetDocumentStatus(ctx, &port.GetDocumentStatusRequest{ProviderDocumentID: *doc.SignerDocumentID})
 	if err != nil {
 		return nil, fmt.Errorf("getting document status: %w", err)
 	}
@@ -456,7 +456,7 @@ func (s *DocumentService) CancelDocument(ctx context.Context, documentID string)
 	}
 
 	if doc.HasSignerInfo() {
-		if err := s.signingProvider.CancelDocument(ctx, *doc.SignerDocumentID); err != nil {
+		if err := s.signingProvider.CancelDocument(ctx, &port.CancelDocumentRequest{ProviderDocumentID: *doc.SignerDocumentID}); err != nil {
 			return fmt.Errorf("canceling document with provider: %w", err)
 		}
 	}
@@ -648,7 +648,7 @@ func (s *DocumentService) uploadPendingProviderDocument(ctx context.Context, doc
 		return fmt.Errorf("document %s has no PDF storage path", doc.ID)
 	}
 
-	pdfData, err := s.storageAdapter.Download(ctx, *doc.PDFStoragePath)
+	pdfData, err := s.storageAdapter.Download(ctx, &port.StorageRequest{Key: *doc.PDFStoragePath})
 	if err != nil {
 		s.markDocError(ctx, doc)
 		return fmt.Errorf("downloading PDF for document %s: %w", doc.ID, err)
@@ -791,7 +791,7 @@ func (s *DocumentService) downloadAndStorePDF(ctx context.Context, doc *entity.D
 		return
 	}
 
-	pdfData, err := s.signingProvider.DownloadSignedPDF(ctx, *doc.SignerDocumentID)
+	pdfData, err := s.signingProvider.DownloadSignedPDF(ctx, &port.DownloadSignedPDFRequest{ProviderDocumentID: *doc.SignerDocumentID})
 	if err != nil {
 		slog.WarnContext(ctx, "failed to download signed PDF",
 			slog.String("document_id", doc.ID),
@@ -802,7 +802,7 @@ func (s *DocumentService) downloadAndStorePDF(ctx context.Context, doc *entity.D
 
 	storageKey := fmt.Sprintf("documents/%s/%s/signed.pdf", doc.WorkspaceID, doc.ID)
 
-	if err := s.storageAdapter.Upload(ctx, storageKey, pdfData, "application/pdf"); err != nil {
+	if err := s.storageAdapter.Upload(ctx, &port.StorageUploadRequest{Key: storageKey, Data: pdfData, ContentType: "application/pdf"}); err != nil {
 		slog.WarnContext(ctx, "failed to store signed PDF",
 			slog.String("document_id", doc.ID),
 			slog.String("error", err.Error()),
@@ -835,7 +835,7 @@ func (s *DocumentService) GetDocumentPDF(ctx context.Context, documentID string)
 		return nil, "", fmt.Errorf("signed PDF not available for this document")
 	}
 
-	data, err := s.storageAdapter.Download(ctx, *doc.PDFStoragePath)
+	data, err := s.storageAdapter.Download(ctx, &port.StorageRequest{Key: *doc.PDFStoragePath})
 	if err != nil {
 		return nil, "", fmt.Errorf("downloading PDF from storage: %w", err)
 	}
@@ -871,7 +871,7 @@ func (s *DocumentService) expireSingleDocument(ctx context.Context, doc *entity.
 	oldStatus := string(doc.Status)
 
 	if doc.HasSignerInfo() {
-		if err := s.signingProvider.CancelDocument(ctx, *doc.SignerDocumentID); err != nil {
+		if err := s.signingProvider.CancelDocument(ctx, &port.CancelDocumentRequest{ProviderDocumentID: *doc.SignerDocumentID}); err != nil {
 			slog.WarnContext(ctx, "failed to cancel expired document with provider",
 				slog.String("document_id", doc.ID),
 				slog.String("error", err.Error()),
@@ -942,7 +942,7 @@ func (s *DocumentService) retrySingleDocument(ctx context.Context, doc *entity.D
 
 // retryWithStatusPoll polls the signing provider for a document that already has a signer ID.
 func (s *DocumentService) retryWithStatusPoll(ctx context.Context, doc *entity.Document) {
-	statusResult, err := s.signingProvider.GetDocumentStatus(ctx, *doc.SignerDocumentID)
+	statusResult, err := s.signingProvider.GetDocumentStatus(ctx, &port.GetDocumentStatusRequest{ProviderDocumentID: *doc.SignerDocumentID})
 	if err != nil {
 		slog.WarnContext(ctx, "retry status poll failed",
 			slog.String("document_id", doc.ID),

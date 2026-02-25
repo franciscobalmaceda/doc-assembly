@@ -163,6 +163,7 @@ type InjectorContext struct {
 	operation       string
 	tenantCode      string
 	workspaceCode   string
+	environment     Environment
 	headers         map[string]string
 	resolvedValues  map[string]any
 	requestPayload  any
@@ -186,6 +187,7 @@ func normalizeHeaders(headers map[string]string) map[string]string {
 func NewInjectorContext(
 	externalID, templateID, transactionalID string,
 	op string,
+	environment Environment,
 	headers map[string]string,
 	payload any,
 ) *InjectorContext {
@@ -194,6 +196,7 @@ func NewInjectorContext(
 		templateID:      templateID,
 		transactionalID: transactionalID,
 		operation:       op,
+		environment:     environment,
 		headers:         normalizeHeaders(headers),
 		resolvedValues:  make(map[string]any),
 		requestPayload:  payload,
@@ -205,6 +208,7 @@ func NewInjectorContextWithCodes(
 	externalID, templateID, transactionalID string,
 	op string,
 	tenantCode, workspaceCode string,
+	environment Environment,
 	headers map[string]string,
 	payload any,
 ) *InjectorContext {
@@ -215,6 +219,7 @@ func NewInjectorContextWithCodes(
 		operation:       op,
 		tenantCode:      tenantCode,
 		workspaceCode:   workspaceCode,
+		environment:     environment,
 		headers:         normalizeHeaders(headers),
 		resolvedValues:  make(map[string]any),
 		requestPayload:  payload,
@@ -275,6 +280,20 @@ func (c *InjectorContext) SetWorkspaceCode(code string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.workspaceCode = code
+}
+
+// Environment returns the environment (dev/prod).
+func (c *InjectorContext) Environment() Environment {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.environment
+}
+
+// SetEnvironment sets the environment (internal use).
+func (c *InjectorContext) SetEnvironment(env Environment) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.environment = env
 }
 
 // Header returns the value of a specific header (case-insensitive).

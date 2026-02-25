@@ -49,6 +49,7 @@ func TestValidateAndExtractHeaders(t *testing.T) {
 	req.Header.Set(HeaderDocumentType, "DOC")
 	req.Header.Set(HeaderExternalID, "EXT")
 	req.Header.Set(HeaderTransactionalID, "TX")
+	req.Header.Set(HeaderEnvironment, "prod")
 	ctx.Request = req
 
 	headers, missing := validateAndExtractHeaders(ctx)
@@ -74,6 +75,7 @@ func TestCreateDocument_MissingPayload(t *testing.T) {
 	req.Header.Set(HeaderDocumentType, "DOC")
 	req.Header.Set(HeaderExternalID, "EXT")
 	req.Header.Set(HeaderTransactionalID, "TX")
+	req.Header.Set(HeaderEnvironment, "prod")
 	ctx.Request = req
 
 	controller.CreateDocument(ctx)
@@ -121,6 +123,7 @@ func executeCreateRequest(t *testing.T, controller *InternalDocumentController, 
 	req.Header.Set(HeaderDocumentType, "DOC")
 	req.Header.Set(HeaderExternalID, "EXT")
 	req.Header.Set(HeaderTransactionalID, "TX")
+	req.Header.Set(HeaderEnvironment, "prod")
 	ctx.Request = req
 
 	fakeUC, ok := controller.internalDocUC.(*fakeInternalDocumentUseCase)

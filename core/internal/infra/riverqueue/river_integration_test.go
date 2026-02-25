@@ -87,6 +87,43 @@ func newTestInfra(t *testing.T, pool *pgxpool.Pool, code string) *testInfra {
 	}
 }
 
+// newSandboxTestInfra creates the same as newTestInfra but with a sandbox workspace.
+// The document will be created in the sandbox workspace so the worker sees is_sandbox=true.
+func newSandboxTestInfra(t *testing.T, pool *pgxpool.Pool, code string) *testInfra {
+	t.Helper()
+
+	tenantID := testhelper.CreateTestTenant(t, pool, "River "+code, code)
+
+	// Create parent (production) workspace
+	parentWorkspaceID := testhelper.CreateTestWorkspace(t, pool, &tenantID, "WS", entity.WorkspaceTypeClient)
+
+	// Create sandbox workspace
+	sandboxWorkspaceID := testhelper.CreateTestSandboxWorkspace(t, pool, parentWorkspaceID)
+
+	// Create template + version + roles in sandbox workspace
+	templateID := testhelper.CreateTestTemplate(t, pool, sandboxWorkspaceID, "Template", nil)
+	versionID := testhelper.CreateTestTemplateVersion(t, pool, templateID, 1, "v1", entity.VersionStatusDraft)
+	testhelper.PublishTestVersion(t, pool, versionID)
+	role1 := testhelper.CreateTestSignerRole(t, pool, versionID, "Signer", "{{SIGN_1}}", 1)
+	role2 := testhelper.CreateTestSignerRole(t, pool, versionID, "Witness", "{{SIGN_2}}", 2)
+	docTypeID := testhelper.CreateTestDocumentType(t, pool, tenantID, code+"_DOC", "Document")
+	testhelper.SetTemplateDocumentType(t, pool, templateID, docTypeID)
+
+	t.Cleanup(func() {
+		testhelper.CleanupWorkspace(t, pool, sandboxWorkspaceID)
+		testhelper.CleanupTenant(t, pool, tenantID)
+	})
+
+	return &testInfra{
+		pool:        pool,
+		tenantID:    tenantID,
+		tenantCode:  code,
+		workspaceID: sandboxWorkspaceID,
+		versionID:   versionID,
+		roleIDs:     [2]string{role1, role2},
+	}
+}
+
 // newDocService creates a fully-wired DocumentService backed by real repos
 // and mock adapters (signing, PDF, storage, notification).
 func newDocService(t *testing.T, pool *pgxpool.Pool) *documentsvc.DocumentService {
@@ -628,4 +665,70 @@ func TestRiver_OrphanedJob(t *testing.T) {
 
 	// Handler must NOT have been called (buildCompletedEvent fails first).
 	assert.Equal(t, int32(0), handlerCalls.Load(), "handler should not run for orphaned document")
+}
+
+// TestRiver_EnvironmentDev verifies that a document in a sandbox workspace
+// produces a DocumentCompletedEvent with Environment=dev.
+func TestRiver_EnvironmentDev(t *testing.T) {
+	pool := testhelper.GetTestPool(t)
+	infra := newSandboxTestInfra(t, pool, "RENV1")
+	ctx := context.Background()
+
+	eventCh := make(chan port.DocumentCompletedEvent, 1)
+	handler := func(_ context.Context, ev port.DocumentCompletedEvent) error {
+		eventCh <- ev
+		return nil
+	}
+
+	docSvc := newDocService(t, pool)
+	riverSvc := newRiver(t, pool, handler, true)
+	docSvc.SetCompletionNotifier(riverSvc.Notifier())
+
+	dd := infra.createDocInProgress(t, docSvc)
+
+	// Sign both recipients to trigger completion.
+	require.NoError(t, docSvc.HandleWebhookEvent(ctx, signedRecipientEvent(dd.providerDocID, dd.providerRcptIDs[0])))
+	require.NoError(t, docSvc.HandleWebhookEvent(ctx, signedRecipientEvent(dd.providerDocID, dd.providerRcptIDs[1])))
+
+	select {
+	case ev := <-eventCh:
+		assert.Equal(t, dd.docID, ev.DocumentID)
+		assert.Equal(t, entity.EnvironmentDev, ev.Environment, "sandbox workspace should produce dev environment")
+		assert.Equal(t, entity.DocumentStatusCompleted, ev.Status)
+	case <-time.After(15 * time.Second):
+		t.Fatal("handler not called within timeout")
+	}
+}
+
+// TestRiver_EnvironmentProd verifies that a document in a regular (non-sandbox)
+// workspace produces a DocumentCompletedEvent with Environment=prod.
+func TestRiver_EnvironmentProd(t *testing.T) {
+	pool := testhelper.GetTestPool(t)
+	infra := newTestInfra(t, pool, "RENV2")
+	ctx := context.Background()
+
+	eventCh := make(chan port.DocumentCompletedEvent, 1)
+	handler := func(_ context.Context, ev port.DocumentCompletedEvent) error {
+		eventCh <- ev
+		return nil
+	}
+
+	docSvc := newDocService(t, pool)
+	riverSvc := newRiver(t, pool, handler, true)
+	docSvc.SetCompletionNotifier(riverSvc.Notifier())
+
+	dd := infra.createDocInProgress(t, docSvc)
+
+	// Sign both recipients to trigger completion.
+	require.NoError(t, docSvc.HandleWebhookEvent(ctx, signedRecipientEvent(dd.providerDocID, dd.providerRcptIDs[0])))
+	require.NoError(t, docSvc.HandleWebhookEvent(ctx, signedRecipientEvent(dd.providerDocID, dd.providerRcptIDs[1])))
+
+	select {
+	case ev := <-eventCh:
+		assert.Equal(t, dd.docID, ev.DocumentID)
+		assert.Equal(t, entity.EnvironmentProd, ev.Environment, "non-sandbox workspace should produce prod environment")
+		assert.Equal(t, entity.DocumentStatusCompleted, ev.Status)
+	case <-time.After(15 * time.Second):
+		t.Fatal("handler not called within timeout")
+	}
 }

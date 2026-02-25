@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/rendis/doc-assembly/core/internal/core/entity"
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 )
 
@@ -53,10 +54,11 @@ func buildCompletedEvent(ctx context.Context, pool *pgxpool.Pool, documentID str
 	var event port.DocumentCompletedEvent
 
 	// Fetch document with workspace and tenant codes.
+	var isSandbox bool
 	err := pool.QueryRow(ctx, `
 		SELECT d.id, d.status, d.client_external_reference_id, d.title,
 		       d.created_at, d.updated_at, d.expires_at,
-		       w.code AS workspace_code, t.code AS tenant_code
+		       w.code AS workspace_code, w.is_sandbox, t.code AS tenant_code
 		FROM execution.documents d
 		JOIN tenancy.workspaces w ON w.id = d.workspace_id
 		JOIN tenancy.tenants t ON t.id = w.tenant_id
@@ -70,11 +72,13 @@ func buildCompletedEvent(ctx context.Context, pool *pgxpool.Pool, documentID str
 		&event.UpdatedAt,
 		&event.ExpiresAt,
 		&event.WorkspaceCode,
+		&isSandbox,
 		&event.TenantCode,
 	)
 	if err != nil {
 		return event, fmt.Errorf("querying document %s: %w", documentID, err)
 	}
+	event.Environment = entity.EnvironmentFromSandbox(isSandbox)
 
 	// Fetch recipients with role information.
 	rows, err := pool.Query(ctx, `

@@ -18,6 +18,7 @@ type MapperContext struct {
 	DocumentTypeCode  string               // document type business code
 	TransactionalID   string               // transactional ID for traceability
 	Operation         entity.OperationType // operation type
+	Environment       entity.Environment   // dev or prod
 	Headers           map[string]string    // HTTP request headers
 	RawBody           []byte               // unparsed body
 }

@@ -132,13 +132,13 @@ func (a *Adapter) GetEmbeddedSigningURL(_ context.Context, req *port.GetEmbedded
 }
 
 // GetDocumentStatus returns the current status of a mock document.
-func (a *Adapter) GetDocumentStatus(_ context.Context, providerDocumentID string) (*port.DocumentStatusResult, error) {
+func (a *Adapter) GetDocumentStatus(_ context.Context, req *port.GetDocumentStatusRequest) (*port.DocumentStatusResult, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
-	doc, ok := a.documents[providerDocumentID]
+	doc, ok := a.documents[req.ProviderDocumentID]
 	if !ok {
-		return nil, fmt.Errorf("mock: document %s not found", providerDocumentID)
+		return nil, fmt.Errorf("mock: document %s not found", req.ProviderDocumentID)
 	}
 
 	recipientResults := make([]port.RecipientStatusResult, 0, len(doc.Recipients))
@@ -172,13 +172,13 @@ func (a *Adapter) GetDocumentStatus(_ context.Context, providerDocumentID string
 }
 
 // CancelDocument sets the mock document status to VOIDED.
-func (a *Adapter) CancelDocument(_ context.Context, providerDocumentID string) error {
+func (a *Adapter) CancelDocument(_ context.Context, req *port.CancelDocumentRequest) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	doc, ok := a.documents[providerDocumentID]
+	doc, ok := a.documents[req.ProviderDocumentID]
 	if !ok {
-		return fmt.Errorf("mock: document %s not found", providerDocumentID)
+		return fmt.Errorf("mock: document %s not found", req.ProviderDocumentID)
 	}
 
 	doc.Status = "VOIDED"
@@ -186,17 +186,17 @@ func (a *Adapter) CancelDocument(_ context.Context, providerDocumentID string) e
 }
 
 // DownloadSignedPDF returns mock PDF bytes.
-func (a *Adapter) DownloadSignedPDF(_ context.Context, providerDocumentID string) ([]byte, error) {
+func (a *Adapter) DownloadSignedPDF(_ context.Context, req *port.DownloadSignedPDFRequest) ([]byte, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
-	doc, ok := a.documents[providerDocumentID]
+	doc, ok := a.documents[req.ProviderDocumentID]
 	if !ok {
-		return nil, fmt.Errorf("mock: document %s not found", providerDocumentID)
+		return nil, fmt.Errorf("mock: document %s not found", req.ProviderDocumentID)
 	}
 
 	if doc.Status != "COMPLETED" {
-		return nil, fmt.Errorf("mock: document %s not completed (status: %s)", providerDocumentID, doc.Status)
+		return nil, fmt.Errorf("mock: document %s not completed (status: %s)", req.ProviderDocumentID, doc.Status)
 	}
 
 	// Return stored PDF or a minimal valid PDF
@@ -208,16 +208,16 @@ func (a *Adapter) DownloadSignedPDF(_ context.Context, providerDocumentID string
 }
 
 // ParseWebhook parses a webhook body into a WebhookEvent (no HMAC validation).
-func (a *Adapter) ParseWebhook(_ context.Context, body []byte, _ string) (*port.WebhookEvent, error) {
+func (a *Adapter) ParseWebhook(_ context.Context, req *port.ParseWebhookRequest) (*port.WebhookEvent, error) {
 	var event port.WebhookEvent
-	if err := json.Unmarshal(body, &event); err != nil {
+	if err := json.Unmarshal(req.Body, &event); err != nil {
 		return nil, fmt.Errorf("mock: parsing webhook: %w", err)
 	}
 
 	if event.Timestamp.IsZero() {
 		event.Timestamp = time.Now()
 	}
-	event.RawPayload = body
+	event.RawPayload = req.Body
 
 	return &event, nil
 }

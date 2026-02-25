@@ -30,13 +30,13 @@ type SigningProvider interface {
 	GetEmbeddedSigningURL(ctx context.Context, req *GetEmbeddedSigningURLRequest) (*GetEmbeddedSigningURLResult, error)
 
 	// GetDocumentStatus retrieves the current status of a document from the provider.
-	GetDocumentStatus(ctx context.Context, providerDocumentID string) (*DocumentStatusResult, error)
+	GetDocumentStatus(ctx context.Context, req *GetDocumentStatusRequest) (*DocumentStatusResult, error)
 
 	// CancelDocument cancels/voids a document that is pending signatures.
-	CancelDocument(ctx context.Context, providerDocumentID string) error
+	CancelDocument(ctx context.Context, req *CancelDocumentRequest) error
 
 	// DownloadSignedPDF downloads the completed/signed PDF from the provider.
-	DownloadSignedPDF(ctx context.Context, providerDocumentID string) ([]byte, error)
+	DownloadSignedPDF(ctx context.Context, req *DownloadSignedPDFRequest) ([]byte, error)
 
 	// ProviderName returns the name of this signing provider (e.g., "documenso", "docusign").
 	ProviderName() string
@@ -65,6 +65,9 @@ type UploadDocumentRequest struct {
 
 	// SignatureFields contains position information for signature fields.
 	SignatureFields []SignatureFieldPosition
+
+	// Environment indicates dev or prod.
+	Environment entity.Environment
 }
 
 // SignatureFieldPosition contains the position and size of a signature field.
@@ -140,6 +143,9 @@ type GetSigningURLRequest struct {
 
 	// ProviderRecipientID is the recipient ID from the signing provider.
 	ProviderRecipientID string
+
+	// Environment indicates dev or prod.
+	Environment entity.Environment
 }
 
 // GetSigningURLResult contains the signing URL for a recipient.
@@ -163,6 +169,9 @@ type GetEmbeddedSigningURLRequest struct {
 	// Providers that support redirect should append it as returnUrl/redirect.
 	// Format: {publicURL}/public/sign/{token}/signing-callback
 	CallbackURL string
+
+	// Environment indicates dev or prod.
+	Environment entity.Environment
 }
 
 // GetEmbeddedSigningURLResult contains the embedded signing URL and CSP info.
@@ -207,6 +216,31 @@ type RecipientStatusResult struct {
 	ProviderStatus string
 }
 
+// GetDocumentStatusRequest contains the data needed to get a document status.
+type GetDocumentStatusRequest struct {
+	ProviderDocumentID string
+	Environment        entity.Environment
+}
+
+// CancelDocumentRequest contains the data needed to cancel a document.
+type CancelDocumentRequest struct {
+	ProviderDocumentID string
+	Environment        entity.Environment
+}
+
+// DownloadSignedPDFRequest contains the data needed to download a signed PDF.
+type DownloadSignedPDFRequest struct {
+	ProviderDocumentID string
+	Environment        entity.Environment
+}
+
+// ParseWebhookRequest contains the data needed to parse a webhook event.
+type ParseWebhookRequest struct {
+	Body        []byte
+	Signature   string
+	Environment entity.Environment
+}
+
 // WebhookEvent represents an incoming webhook event from a signing provider.
 type WebhookEvent struct {
 	// EventType is the type of event (e.g., "document.signed", "document.completed").
@@ -235,5 +269,5 @@ type WebhookEvent struct {
 type WebhookHandler interface {
 	// ParseWebhook parses and validates an incoming webhook request.
 	// Returns the parsed event or an error if the signature is invalid.
-	ParseWebhook(ctx context.Context, body []byte, signature string) (*WebhookEvent, error)
+	ParseWebhook(ctx context.Context, req *ParseWebhookRequest) (*WebhookEvent, error)
 }

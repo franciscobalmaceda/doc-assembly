@@ -180,6 +180,7 @@ func (g *DocumentGenerator) fetchTemplateData(ctx context.Context, mapCtx *port.
 		mapCtx.TemplateID,
 		mapCtx.TransactionalID,
 		string(mapCtx.Operation),
+		mapCtx.Environment,
 		mapCtx.Headers,
 		nil,
 	)
@@ -410,6 +411,7 @@ func (g *DocumentGenerator) resolveInjectables(
 			string(mapCtx.Operation),
 			mapCtx.TenantCode,
 			mapCtx.WorkspaceCode,
+			mapCtx.Environment,
 			mapCtx.Headers,
 			payload,
 		)
@@ -419,6 +421,7 @@ func (g *DocumentGenerator) resolveInjectables(
 			mapCtx.TemplateID,
 			mapCtx.TransactionalID,
 			string(mapCtx.Operation),
+			mapCtx.Environment,
 			mapCtx.Headers,
 			payload,
 		)

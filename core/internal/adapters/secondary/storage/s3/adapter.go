@@ -61,12 +61,12 @@ func New(cfg *Config) (port.StorageAdapter, error) {
 }
 
 // Upload stores data with the given key and content type.
-func (a *Adapter) Upload(ctx context.Context, key string, data []byte, contentType string) error {
+func (a *Adapter) Upload(ctx context.Context, req *port.StorageUploadRequest) error {
 	input := &s3.PutObjectInput{
 		Bucket:      aws.String(a.bucket),
-		Key:         aws.String(key),
-		Body:        bytes.NewReader(data),
-		ContentType: aws.String(contentType),
+		Key:         aws.String(req.Key),
+		Body:        bytes.NewReader(req.Data),
+		ContentType: aws.String(req.ContentType),
 	}
 
 	_, err := a.client.PutObject(ctx, input)
@@ -78,10 +78,10 @@ func (a *Adapter) Upload(ctx context.Context, key string, data []byte, contentTy
 }
 
 // Download retrieves data by key.
-func (a *Adapter) Download(ctx context.Context, key string) ([]byte, error) {
+func (a *Adapter) Download(ctx context.Context, req *port.StorageRequest) ([]byte, error) {
 	input := &s3.GetObjectInput{
 		Bucket: aws.String(a.bucket),
-		Key:    aws.String(key),
+		Key:    aws.String(req.Key),
 	}
 
 	result, err := a.client.GetObject(ctx, input)
@@ -99,12 +99,12 @@ func (a *Adapter) Download(ctx context.Context, key string) ([]byte, error) {
 }
 
 // GetURL returns a presigned URL for accessing the object.
-func (a *Adapter) GetURL(ctx context.Context, key string) (string, error) {
+func (a *Adapter) GetURL(ctx context.Context, req *port.StorageRequest) (string, error) {
 	presignClient := s3.NewPresignClient(a.client)
 
 	input := &s3.GetObjectInput{
 		Bucket: aws.String(a.bucket),
-		Key:    aws.String(key),
+		Key:    aws.String(req.Key),
 	}
 
 	// Generate presigned URL valid for 1 hour
@@ -119,10 +119,10 @@ func (a *Adapter) GetURL(ctx context.Context, key string) (string, error) {
 }
 
 // Delete removes an object by key.
-func (a *Adapter) Delete(ctx context.Context, key string) error {
+func (a *Adapter) Delete(ctx context.Context, req *port.StorageRequest) error {
 	input := &s3.DeleteObjectInput{
 		Bucket: aws.String(a.bucket),
-		Key:    aws.String(key),
+		Key:    aws.String(req.Key),
 	}
 
 	_, err := a.client.DeleteObject(ctx, input)
@@ -134,10 +134,10 @@ func (a *Adapter) Delete(ctx context.Context, key string) error {
 }
 
 // Exists checks if an object exists at the given key.
-func (a *Adapter) Exists(ctx context.Context, key string) (bool, error) {
+func (a *Adapter) Exists(ctx context.Context, req *port.StorageRequest) (bool, error) {
 	input := &s3.HeadObjectInput{
 		Bucket: aws.String(a.bucket),
-		Key:    aws.String(key),
+		Key:    aws.String(req.Key),
 	}
 
 	_, err := a.client.HeadObject(ctx, input)

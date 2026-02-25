@@ -109,7 +109,11 @@ func extractWebhookSignature(ctx *gin.Context) string {
 // parseWebhook parses and validates the webhook payload.
 // Returns the parsed event and true on success, or false if an error response was sent.
 func (c *WebhookController) parseWebhook(ctx *gin.Context, handler port.WebhookHandler, body []byte, signature, provider string) (*port.WebhookEvent, bool) {
-	event, err := handler.ParseWebhook(ctx.Request.Context(), body, signature)
+	event, err := handler.ParseWebhook(ctx.Request.Context(), &port.ParseWebhookRequest{
+		Body:        body,
+		Signature:   signature,
+		Environment: entity.EnvironmentProd,
+	})
 	if err != nil {
 		if err == entity.ErrInvalidWebhookSignature {
 			slog.WarnContext(ctx.Request.Context(), "invalid webhook signature",

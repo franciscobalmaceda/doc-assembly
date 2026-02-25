@@ -2,6 +2,7 @@ package document
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -85,6 +86,7 @@ func (s *InternalDocumentService) CreateDocument(
 		DocumentTypeCode:  cmd.DocumentType,
 		TransactionalID:   cmd.TransactionalID,
 		Operation:         entity.OperationCreate,
+		Environment:       cmd.Environment,
 		Headers:           cmd.Headers,
 		RawBody:           cmd.PayloadRaw,
 	}
@@ -133,7 +135,7 @@ type internalResolvedContext struct {
 	version      *entity.TemplateVersionWithDetails
 }
 
-//nolint:funlen,gocognit // Resolution has explicit fallback and validation stages.
+//nolint:funlen // Resolution has explicit fallback and validation stages.
 func (s *InternalDocumentService) resolveTemplateContext(
 	ctx context.Context,
 	cmd documentuc.InternalCreateCommand,
@@ -167,26 +169,16 @@ func (s *InternalDocumentService) resolveTemplateContext(
 		SupersedeReason: cmd.SupersedeReason,
 		Headers:         cmd.Headers,
 		RawBody:         cmd.PayloadRaw,
+		Environment:     cmd.Environment,
 	}
 
-	var versionID *string
-	if s.customResolver != nil {
-		vID, err := s.customResolver.Resolve(ctx, resolverReq, s.searchAdapter)
-		if err != nil {
-			return nil, fmt.Errorf("custom template resolver failed: %w", err)
-		}
-		versionID = vID
+	if err := s.applySandboxWorkspaceCode(ctx, resolverReq, workspace.ID, cmd.Environment); err != nil {
+		return nil, err
 	}
 
-	if versionID == nil {
-		vID, err := s.defaultResolver.Resolve(ctx, resolverReq, s.searchAdapter)
-		if err != nil {
-			return nil, err
-		}
-		versionID = vID
-	}
-	if versionID == nil || *versionID == "" {
-		return nil, entity.ErrInternalTemplateResolutionNotFound
+	versionID, err := s.resolveTemplateVersionID(ctx, resolverReq)
+	if err != nil {
+		return nil, err
 	}
 
 	version, err := s.versionRepo.FindByIDWithDetails(ctx, *versionID)
@@ -212,6 +204,54 @@ func (s *InternalDocumentService) resolveTemplateContext(
 		template:     template,
 		version:      version,
 	}, nil
+}
+
+// applySandboxWorkspaceCode populates SandboxWorkspaceCode when environment is dev.
+func (s *InternalDocumentService) applySandboxWorkspaceCode(
+	ctx context.Context,
+	req *port.TemplateResolverRequest,
+	workspaceID string,
+	env entity.Environment,
+) error {
+	if env != entity.EnvironmentDev {
+		return nil
+	}
+	sandbox, err := s.workspaceRepo.FindSandboxByParentID(ctx, workspaceID)
+	if err == nil {
+		req.SandboxWorkspaceCode = sandbox.Code
+		return nil
+	}
+	if errors.Is(err, entity.ErrSandboxNotFound) {
+		return nil
+	}
+	return fmt.Errorf("resolving sandbox workspace: %w", err)
+}
+
+// resolveTemplateVersionID runs custom then default resolver to find a template version.
+func (s *InternalDocumentService) resolveTemplateVersionID(
+	ctx context.Context,
+	req *port.TemplateResolverRequest,
+) (*string, error) {
+	var versionID *string
+	if s.customResolver != nil {
+		vID, err := s.customResolver.Resolve(ctx, req, s.searchAdapter)
+		if err != nil {
+			return nil, fmt.Errorf("custom template resolver failed: %w", err)
+		}
+		versionID = vID
+	}
+
+	if versionID == nil {
+		vID, err := s.defaultResolver.Resolve(ctx, req, s.searchAdapter)
+		if err != nil {
+			return nil, err
+		}
+		versionID = vID
+	}
+	if versionID == nil || *versionID == "" {
+		return nil, entity.ErrInternalTemplateResolutionNotFound
+	}
+	return versionID, nil
 }
 
 func (s *InternalDocumentService) buildInternalDocument(

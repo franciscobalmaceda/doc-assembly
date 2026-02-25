@@ -18,7 +18,7 @@ type fakePublicDocAuth struct {
 	err    error
 }
 
-func (f *fakePublicDocAuth) Authenticate(_ *gin.Context, _ string) (*port.PublicDocumentAccessClaims, error) {
+func (f *fakePublicDocAuth) Authenticate(_ *gin.Context, _ *port.AuthenticateRequest) (*port.PublicDocumentAccessClaims, error) {
 	if f.err != nil {
 		return nil, f.err
 	}

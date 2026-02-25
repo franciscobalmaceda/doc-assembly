@@ -433,13 +433,13 @@ func (s *PreSigningService) DownloadCompletedPDF(ctx context.Context, token stri
 			return nil, "", fmt.Errorf("completed PDF is not available")
 		}
 
-		pdfData, err := s.signingProvider.DownloadSignedPDF(ctx, *doc.SignerDocumentID)
+		pdfData, err := s.signingProvider.DownloadSignedPDF(ctx, &port.DownloadSignedPDFRequest{ProviderDocumentID: *doc.SignerDocumentID})
 		if err != nil {
 			return nil, "", fmt.Errorf("downloading completed PDF: %w", err)
 		}
 
 		storageKey := fmt.Sprintf("documents/%s/%s/signed.pdf", doc.WorkspaceID, doc.ID)
-		if err := s.storageAdapter.Upload(ctx, storageKey, pdfData, "application/pdf"); err != nil {
+		if err := s.storageAdapter.Upload(ctx, &port.StorageUploadRequest{Key: storageKey, Data: pdfData, ContentType: "application/pdf"}); err != nil {
 			return nil, "", fmt.Errorf("storing completed PDF: %w", err)
 		}
 
@@ -452,7 +452,7 @@ func (s *PreSigningService) DownloadCompletedPDF(ctx context.Context, token stri
 		}
 	}
 
-	pdfData, err := s.storageAdapter.Download(ctx, *doc.PDFStoragePath)
+	pdfData, err := s.storageAdapter.Download(ctx, &port.StorageRequest{Key: *doc.PDFStoragePath})
 	if err != nil {
 		return nil, "", fmt.Errorf("downloading completed PDF: %w", err)
 	}
@@ -974,7 +974,7 @@ func (s *PreSigningService) renderAndSendToProvider(
 	}
 
 	storagePath := fmt.Sprintf("documents/%s/%s/pre-signed.pdf", doc.WorkspaceID, doc.ID)
-	if err := s.storageAdapter.Upload(ctx, storagePath, renderResult.PDF, "application/pdf"); err != nil {
+	if err := s.storageAdapter.Upload(ctx, &port.StorageUploadRequest{Key: storagePath, Data: renderResult.PDF, ContentType: "application/pdf"}); err != nil {
 		return fmt.Errorf("storing PDF: %w", err)
 	}
 	doc.SetPDFPath(storagePath)

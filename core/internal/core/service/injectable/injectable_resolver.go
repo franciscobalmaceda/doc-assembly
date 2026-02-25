@@ -175,6 +175,7 @@ func (s *InjectableResolverService) resolveProviderCodes(
 		Headers:         injCtx.GetHeaders(),
 		Payload:         injCtx.RequestPayload(),
 		InitData:        injCtx.InitData(),
+		Environment:     injCtx.Environment(),
 	}
 
 	providerResult, err := provider.ResolveInjectables(ctx, req)

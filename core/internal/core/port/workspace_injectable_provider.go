@@ -116,6 +116,9 @@ type ResolveInjectablesRequest struct {
 
 	// InitData contains shared initialization data from InitFunc.
 	InitData any
+
+	// Environment indicates dev or prod.
+	Environment entity.Environment
 }
 
 // ResolveInjectablesResult contains the resolved values and any non-critical errors.

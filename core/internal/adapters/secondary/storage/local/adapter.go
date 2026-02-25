@@ -28,15 +28,15 @@ func New(baseDir string) (port.StorageAdapter, error) {
 }
 
 // Upload stores data with the given key and content type.
-func (a *Adapter) Upload(_ context.Context, key string, data []byte, _ string) error {
-	fullPath := filepath.Join(a.baseDir, key)
+func (a *Adapter) Upload(_ context.Context, req *port.StorageUploadRequest) error {
+	fullPath := filepath.Join(a.baseDir, req.Key)
 
 	dir := filepath.Dir(fullPath)
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("local storage: creating directories: %w", err)
 	}
 
-	if err := os.WriteFile(fullPath, data, 0o600); err != nil {
+	if err := os.WriteFile(fullPath, req.Data, 0o600); err != nil {
 		return fmt.Errorf("local storage: writing file: %w", err)
 	}
 
@@ -44,8 +44,8 @@ func (a *Adapter) Upload(_ context.Context, key string, data []byte, _ string) e
 }
 
 // Download retrieves data by key.
-func (a *Adapter) Download(_ context.Context, key string) ([]byte, error) {
-	fullPath := filepath.Join(a.baseDir, key)
+func (a *Adapter) Download(_ context.Context, req *port.StorageRequest) ([]byte, error) {
+	fullPath := filepath.Join(a.baseDir, req.Key)
 
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
@@ -56,8 +56,8 @@ func (a *Adapter) Download(_ context.Context, key string) ([]byte, error) {
 }
 
 // GetURL returns a file:// URL for accessing the object.
-func (a *Adapter) GetURL(_ context.Context, key string) (string, error) {
-	fullPath := filepath.Join(a.baseDir, key)
+func (a *Adapter) GetURL(_ context.Context, req *port.StorageRequest) (string, error) {
+	fullPath := filepath.Join(a.baseDir, req.Key)
 
 	absPath, err := filepath.Abs(fullPath)
 	if err != nil {
@@ -68,8 +68,8 @@ func (a *Adapter) GetURL(_ context.Context, key string) (string, error) {
 }
 
 // Delete removes an object by key.
-func (a *Adapter) Delete(_ context.Context, key string) error {
-	fullPath := filepath.Join(a.baseDir, key)
+func (a *Adapter) Delete(_ context.Context, req *port.StorageRequest) error {
+	fullPath := filepath.Join(a.baseDir, req.Key)
 
 	if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("local storage: deleting file: %w", err)
@@ -79,8 +79,8 @@ func (a *Adapter) Delete(_ context.Context, key string) error {
 }
 
 // Exists checks if an object exists at the given key.
-func (a *Adapter) Exists(_ context.Context, key string) (bool, error) {
-	fullPath := filepath.Join(a.baseDir, key)
+func (a *Adapter) Exists(_ context.Context, req *port.StorageRequest) (bool, error) {
+	fullPath := filepath.Join(a.baseDir, req.Key)
 
 	_, err := os.Stat(fullPath)
 	if err != nil {

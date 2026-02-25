@@ -21,6 +21,8 @@ const (
 	sandboxModeKey = "sandbox_mode"
 	// parentWorkspaceIDKey is the context key for the parent workspace ID when in sandbox mode.
 	parentWorkspaceIDKey = "parent_workspace_id"
+	// environmentKey is the context key for the resolved environment.
+	environmentKey = "environment"
 )
 
 // SandboxContext creates a middleware that resolves sandbox workspace when X-Sandbox-Mode header is set.
@@ -30,6 +32,7 @@ const (
 func SandboxContext(workspaceRepo port.WorkspaceRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.Method == http.MethodOptions || c.GetHeader(SandboxModeHeader) != "true" {
+			c.Set(environmentKey, entity.EnvironmentProd)
 			c.Next()
 			return
 		}
@@ -48,6 +51,7 @@ func SandboxContext(workspaceRepo port.WorkspaceRepository) gin.HandlerFunc {
 		c.Set(parentWorkspaceIDKey, parentWorkspaceID)
 		c.Set(workspaceIDKey, sandbox.ID)
 		c.Set(sandboxModeKey, true)
+		c.Set(environmentKey, entity.EnvironmentDev)
 
 		slog.DebugContext(c.Request.Context(), "sandbox mode enabled",
 			slog.String("parent_workspace_id", parentWorkspaceID),
@@ -170,4 +174,17 @@ func GetParentWorkspaceID(c *gin.Context) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// GetEnvironment returns the environment derived from the request context.
+func GetEnvironment(c *gin.Context) entity.Environment {
+	if val, exists := c.Get(environmentKey); exists {
+		if env, ok := val.(entity.Environment); ok {
+			return env
+		}
+	}
+	if IsSandboxMode(c) {
+		return entity.EnvironmentDev
+	}
+	return entity.EnvironmentProd
 }

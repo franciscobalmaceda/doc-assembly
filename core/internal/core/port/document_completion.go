@@ -28,6 +28,7 @@ type DocumentCompletedEvent struct {
 	Status        entity.DocumentStatus
 	WorkspaceCode string
 	TenantCode    string
+	Environment   entity.Environment
 	CreatedAt     time.Time
 	UpdatedAt     *time.Time
 	ExpiresAt     *time.Time

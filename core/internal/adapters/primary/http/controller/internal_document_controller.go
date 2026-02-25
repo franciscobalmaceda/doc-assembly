@@ -9,6 +9,7 @@ import (
 
 	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
 	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
+	"github.com/rendis/doc-assembly/core/internal/core/entity"
 	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
 )
 
@@ -19,6 +20,7 @@ const (
 	HeaderDocumentType    = "X-Document-Type"
 	HeaderExternalID      = "X-External-ID"
 	HeaderTransactionalID = "X-Transactional-ID"
+	HeaderEnvironment     = "X-Environment"
 )
 
 // internalDocHeaders holds the required headers for internal document operations.
@@ -28,6 +30,7 @@ type internalDocHeaders struct {
 	DocumentType    string
 	ExternalID      string
 	TransactionalID string
+	Environment     string
 }
 
 // InternalDocumentController handles internal API document requests.
@@ -88,6 +91,16 @@ func (c *InternalDocumentController) CreateDocument(ctx *gin.Context) {
 		return
 	}
 
+	env, err := entity.ParseEnvironment(h.Environment)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.InternalErrorResponse{
+			Error:   "invalid X-Environment header value (must be 'dev' or 'prod')",
+			Code:    "INVALID_HEADER",
+			Details: []string{HeaderEnvironment},
+		})
+		return
+	}
+
 	rawBody, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, dto.InternalErrorResponse{
@@ -130,6 +143,7 @@ func (c *InternalDocumentController) CreateDocument(ctx *gin.Context) {
 		DocumentType:    h.DocumentType,
 		ExternalID:      h.ExternalID,
 		TransactionalID: h.TransactionalID,
+		Environment:     env,
 		ForceCreate:     forceCreate,
 		SupersedeReason: req.SupersedeReason,
 		Headers:         headers,
@@ -159,6 +173,7 @@ func validateAndExtractHeaders(ctx *gin.Context) (*internalDocHeaders, []string)
 		DocumentType:    ctx.GetHeader(HeaderDocumentType),
 		ExternalID:      ctx.GetHeader(HeaderExternalID),
 		TransactionalID: ctx.GetHeader(HeaderTransactionalID),
+		Environment:     ctx.GetHeader(HeaderEnvironment),
 	}
 
 	var missing []string
@@ -176,6 +191,9 @@ func validateAndExtractHeaders(ctx *gin.Context) (*internalDocHeaders, []string)
 	}
 	if h.TransactionalID == "" {
 		missing = append(missing, HeaderTransactionalID)
+	}
+	if h.Environment == "" {
+		missing = append(missing, HeaderEnvironment)
 	}
 
 	return h, missing

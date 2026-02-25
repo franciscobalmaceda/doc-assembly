@@ -142,6 +142,34 @@ func CreateTestWorkspace(t *testing.T, pool *pgxpool.Pool, tenantID *string, nam
 	return workspaceID
 }
 
+// CreateTestSandboxWorkspace creates a sandbox workspace linked to the given parent workspace.
+// Returns the sandbox workspace ID.
+func CreateTestSandboxWorkspace(t *testing.T, pool *pgxpool.Pool, parentWorkspaceID string) string {
+	t.Helper()
+	ctx := context.Background()
+
+	var tenantID, parentCode string
+	var parentType entity.WorkspaceType
+	var parentStatus entity.WorkspaceStatus
+	err := pool.QueryRow(ctx,
+		`SELECT tenant_id, code, type, status FROM tenancy.workspaces WHERE id = $1`,
+		parentWorkspaceID,
+	).Scan(&tenantID, &parentCode, &parentType, &parentStatus)
+	require.NoError(t, err, "failed to load parent workspace for sandbox")
+
+	workspaceID := uuid.NewString()
+	now := time.Now().UTC()
+	code := "SBX_" + parentCode
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO tenancy.workspaces (id, tenant_id, name, code, type, status, is_sandbox, sandbox_of_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		workspaceID, tenantID, "Sandbox of "+parentCode, code, parentType, parentStatus, true, parentWorkspaceID, now)
+	require.NoError(t, err, "failed to create sandbox workspace")
+
+	return workspaceID
+}
+
 // CleanupWorkspace removes a test workspace and all associated data.
 func CleanupWorkspace(t *testing.T, pool *pgxpool.Pool, workspaceID string) {
 	t.Helper()

@@ -395,8 +395,8 @@ func (a *Adapter) GetEmbeddedSigningURL(ctx context.Context, req *port.GetEmbedd
 }
 
 // GetDocumentStatus retrieves the current status of a document from Documenso.
-func (a *Adapter) GetDocumentStatus(ctx context.Context, providerDocumentID string) (*port.DocumentStatusResult, error) {
-	envResp, err := a.fetchEnvelope(ctx, providerDocumentID)
+func (a *Adapter) GetDocumentStatus(ctx context.Context, req *port.GetDocumentStatusRequest) (*port.DocumentStatusResult, error) {
+	envResp, err := a.fetchEnvelope(ctx, req.ProviderDocumentID)
 	if err != nil {
 		return nil, err
 	}
@@ -506,10 +506,10 @@ func determineFinalStatus(envStatus string, allSigned, anyDeclined bool, recipie
 }
 
 // CancelDocument cancels/voids a document that is pending signatures.
-func (a *Adapter) CancelDocument(ctx context.Context, providerDocumentID string) error {
+func (a *Adapter) CancelDocument(ctx context.Context, req *port.CancelDocumentRequest) error {
 	return a.postEnvelopeAction(
 		ctx,
-		providerDocumentID,
+		req.ProviderDocumentID,
 		"/envelope/cancel",
 		"marshaling cancel request",
 		"creating request",
@@ -557,15 +557,14 @@ func (a *Adapter) postEnvelopeAction(
 }
 
 // DownloadSignedPDF downloads the completed/signed PDF from Documenso.
-func (a *Adapter) DownloadSignedPDF(ctx context.Context, providerDocumentID string) ([]byte, error) {
-	// Fetch envelope details to get the envelope item ID for download
-	envResp, err := a.fetchEnvelope(ctx, providerDocumentID)
+func (a *Adapter) DownloadSignedPDF(ctx context.Context, req *port.DownloadSignedPDFRequest) ([]byte, error) {
+	envResp, err := a.fetchEnvelope(ctx, req.ProviderDocumentID)
 	if err != nil {
 		return nil, fmt.Errorf("fetching envelope for PDF download: %w", err)
 	}
 
 	if len(envResp.EnvelopeItems) == 0 {
-		return nil, fmt.Errorf("envelope %s has no items to download", providerDocumentID)
+		return nil, fmt.Errorf("envelope %s has no items to download", req.ProviderDocumentID)
 	}
 
 	itemID := envResp.EnvelopeItems[0].ID
@@ -598,20 +597,18 @@ func (a *Adapter) DownloadSignedPDF(ctx context.Context, providerDocumentID stri
 }
 
 // ParseWebhook parses and validates an incoming webhook request.
-func (a *Adapter) ParseWebhook(ctx context.Context, body []byte, signature string) (*port.WebhookEvent, error) {
-	// Validate signature if secret is configured
+func (a *Adapter) ParseWebhook(ctx context.Context, req *port.ParseWebhookRequest) (*port.WebhookEvent, error) {
 	if a.config.WebhookSecret != "" {
-		if !a.validateSignature(body, signature) {
+		if !a.validateSignature(req.Body, req.Signature) {
 			return nil, entity.ErrInvalidWebhookSignature
 		}
 	}
 
 	var payload webhookPayload
-	if err := json.Unmarshal(body, &payload); err != nil {
+	if err := json.Unmarshal(req.Body, &payload); err != nil {
 		return nil, fmt.Errorf("parsing webhook payload: %w", err)
 	}
 
-	// Determine provider document ID: prefer externalId (our document UUID), fallback to numeric ID
 	providerDocID := strconv.Itoa(payload.Payload.ID)
 	if payload.Payload.ExternalID != nil && *payload.Payload.ExternalID != "" {
 		providerDocID = *payload.Payload.ExternalID
@@ -621,7 +618,7 @@ func (a *Adapter) ParseWebhook(ctx context.Context, body []byte, signature strin
 		EventType:          payload.Event,
 		ProviderDocumentID: providerDocID,
 		Timestamp:          time.Now(),
-		RawPayload:         body,
+		RawPayload:         req.Body,
 	}
 
 	// Map the event type to status changes

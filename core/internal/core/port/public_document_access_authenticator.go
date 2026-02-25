@@ -1,6 +1,16 @@
 package port
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+
+	"github.com/rendis/doc-assembly/core/internal/core/entity"
+)
+
+// AuthenticateRequest contains the data needed for public document authentication.
+type AuthenticateRequest struct {
+	DocumentID  string
+	Environment entity.Environment
+}
 
 // PublicDocumentAccessAuthenticator defines custom authentication for public
 // document access endpoints (/public/doc/:documentId).
@@ -13,7 +23,7 @@ type PublicDocumentAccessAuthenticator interface {
 	// Return (nil, nil) to indicate "fallback to email gate".
 	// Return (claims, nil) to indicate direct access is allowed.
 	// Return (nil, err) to indicate auth failed (also falls back to email gate).
-	Authenticate(c *gin.Context, documentID string) (*PublicDocumentAccessClaims, error)
+	Authenticate(c *gin.Context, req *AuthenticateRequest) (*PublicDocumentAccessClaims, error)
 }
 
 // PublicDocumentAccessClaims contains the resolved recipient identity.

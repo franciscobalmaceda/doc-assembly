@@ -1,18 +1,24 @@
 package port
 
-import "context"
+import (
+	"context"
+
+	"github.com/rendis/doc-assembly/core/internal/core/entity"
+)
 
 // TemplateResolverRequest is the context passed to custom template resolvers.
 type TemplateResolverRequest struct {
-	TenantCode      string
-	WorkspaceCode   string
-	DocumentType    string
-	ExternalID      string
-	TransactionalID string
-	ForceCreate     bool
-	SupersedeReason *string
-	Headers         map[string]string
-	RawBody         []byte
+	TenantCode           string
+	WorkspaceCode        string
+	SandboxWorkspaceCode string // populated when Environment==dev, empty for prod
+	DocumentType         string
+	ExternalID           string
+	TransactionalID      string
+	ForceCreate          bool
+	SupersedeReason      *string
+	Headers              map[string]string
+	RawBody              []byte
+	Environment          entity.Environment
 }
 
 // TemplateResolver allows custom template version selection before default fallback.

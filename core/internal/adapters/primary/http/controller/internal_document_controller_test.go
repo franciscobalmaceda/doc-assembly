@@ -98,6 +98,20 @@ func (e *internalCreateEnv) postCreate(
 	payload any,
 ) (*http.Response, []byte, dto.InternalCreateDocumentWithRecipientsResponse) {
 	t.Helper()
+	return e.postCreateWithEnv(t, "prod", docTypeCode, externalID, transactionalID, forceCreate, supersedeReason, payload)
+}
+
+func (e *internalCreateEnv) postCreateWithEnv(
+	t *testing.T,
+	environment,
+	docTypeCode,
+	externalID,
+	transactionalID string,
+	forceCreate *bool,
+	supersedeReason *string,
+	payload any,
+) (*http.Response, []byte, dto.InternalCreateDocumentWithRecipientsResponse) {
+	t.Helper()
 
 	req := map[string]any{
 		"payload": payload,
@@ -116,6 +130,7 @@ func (e *internalCreateEnv) postCreate(
 		WithHeader("X-Document-Type", docTypeCode).
 		WithHeader("X-External-ID", externalID).
 		WithHeader("X-Transactional-ID", transactionalID).
+		WithHeader("X-Environment", environment).
 		POST("/api/v1/internal/documents/create", req)
 
 	var parsed dto.InternalCreateDocumentWithRecipientsResponse
@@ -124,6 +139,25 @@ func (e *internalCreateEnv) postCreate(
 	}
 
 	return resp, body, parsed
+}
+
+func (e *internalCreateEnv) postCreateRaw(
+	t *testing.T,
+	headers map[string]string,
+	payload any,
+) (*http.Response, []byte) {
+	t.Helper()
+
+	req := map[string]any{
+		"payload": payload,
+	}
+
+	c := e.client
+	for k, v := range headers {
+		c = c.WithHeader(k, v)
+	}
+
+	return c.POST("/api/v1/internal/documents/create", req)
 }
 
 func TestInternalDocumentController_CreateAndReplay(t *testing.T) {
@@ -372,6 +406,135 @@ func TestInternalDocumentController_LegacyContractAndMissingV2(t *testing.T) {
 		WithHeader("X-API-Key", testhelper.TestInternalAPIKey).
 		POST("/api/v1/internal/documents/create-v2", map[string]any{"payload": map[string]any{"k": "v"}})
 	require.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
+}
+
+func TestInternalDocumentController_EnvironmentHeaderValidation(t *testing.T) {
+	t.Run("missing X-Environment returns 400", func(t *testing.T) {
+		env := setupInternalCreateEnv(t, nil, true)
+		env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+		resp, body := env.postCreateRaw(t, map[string]string{
+			"X-API-Key":          testhelper.TestInternalAPIKey,
+			"X-Tenant-Code":      env.tenantCode,
+			"X-Workspace-Code":   env.workspaceCode,
+			"X-Document-Type":    env.documentTypeCode,
+			"X-External-ID":      "ext-no-env",
+			"X-Transactional-ID": "tx-no-env",
+		}, map[string]any{"k": "v"})
+
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode, string(body))
+
+		var errResp dto.InternalErrorResponse
+		require.NoError(t, json.Unmarshal(body, &errResp))
+		assert.Equal(t, "MISSING_HEADERS", errResp.Code)
+		assert.Contains(t, errResp.Details, "X-Environment")
+	})
+
+	t.Run("invalid X-Environment returns 400", func(t *testing.T) {
+		env := setupInternalCreateEnv(t, nil, true)
+		env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+		resp, body, _ := env.postCreateWithEnv(t, "staging", env.documentTypeCode, "ext-invalid-env", "tx-invalid-env", nil, nil, map[string]any{"k": "v"})
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode, string(body))
+
+		var errResp dto.InternalErrorResponse
+		require.NoError(t, json.Unmarshal(body, &errResp))
+		assert.Equal(t, "INVALID_HEADER", errResp.Code)
+	})
+
+	t.Run("env prod creates document normally", func(t *testing.T) {
+		env := setupInternalCreateEnv(t, nil, true)
+		_, versionID := env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+		resp, body, out := env.postCreateWithEnv(t, "prod", env.documentTypeCode, "ext-prod", "tx-prod", nil, nil, map[string]any{"env": "prod"})
+		require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+		assert.Equal(t, versionID, out.TemplateVersionID)
+	})
+}
+
+func TestInternalDocumentController_EnvironmentDevSandboxFirst(t *testing.T) {
+	t.Run("dev resolves sandbox template first", func(t *testing.T) {
+		env := setupInternalCreateEnv(t, nil, true)
+
+		// Create sandbox workspace for the prod workspace
+		sandboxID := testhelper.CreateTestSandboxWorkspace(t, env.pool, env.workspaceID)
+		t.Cleanup(func() { testhelper.CleanupWorkspace(t, env.pool, sandboxID) })
+
+		// Publish template ONLY in sandbox workspace
+		_, sandboxVersionID := env.createPublishedTemplate(t, sandboxID, env.documentTypeID)
+
+		resp, body, out := env.postCreateWithEnv(t, "dev", env.documentTypeCode, "ext-sbx-hit", "tx-sbx-hit", nil, nil, map[string]any{"sandbox": true})
+		require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+		assert.Equal(t, sandboxVersionID, out.TemplateVersionID)
+	})
+
+	t.Run("dev falls back to prod when sandbox has no template", func(t *testing.T) {
+		env := setupInternalCreateEnv(t, nil, true)
+
+		// Create sandbox workspace (empty, no template)
+		sandboxID := testhelper.CreateTestSandboxWorkspace(t, env.pool, env.workspaceID)
+		t.Cleanup(func() { testhelper.CleanupWorkspace(t, env.pool, sandboxID) })
+
+		// Publish template ONLY in prod workspace
+		_, prodVersionID := env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+		resp, body, out := env.postCreateWithEnv(t, "dev", env.documentTypeCode, "ext-sbx-miss", "tx-sbx-miss", nil, nil, map[string]any{"sandbox": false})
+		require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+		assert.Equal(t, prodVersionID, out.TemplateVersionID)
+	})
+
+	t.Run("dev without sandbox workspace behaves like prod", func(t *testing.T) {
+		env := setupInternalCreateEnv(t, nil, true)
+
+		// No sandbox workspace created — just prod template
+		_, prodVersionID := env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+		resp, body, out := env.postCreateWithEnv(t, "dev", env.documentTypeCode, "ext-no-sbx", "tx-no-sbx", nil, nil, map[string]any{"no_sandbox": true})
+		require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+		assert.Equal(t, prodVersionID, out.TemplateVersionID)
+	})
+}
+
+func TestInternalDocumentController_EnvironmentPropagatedToResolver(t *testing.T) {
+	t.Run("dev environment reaches custom resolver", func(t *testing.T) {
+		var receivedEnv entity.Environment
+		var receivedSandboxCode string
+		resolver := resolverFunc(func(_ context.Context, req *port.TemplateResolverRequest, _ port.TemplateVersionSearchAdapter) (*string, error) {
+			receivedEnv = req.Environment
+			receivedSandboxCode = req.SandboxWorkspaceCode
+			return nil, nil // fall back to default
+		})
+
+		env := setupInternalCreateEnv(t, resolver, true)
+		sandboxID := testhelper.CreateTestSandboxWorkspace(t, env.pool, env.workspaceID)
+		t.Cleanup(func() { testhelper.CleanupWorkspace(t, env.pool, sandboxID) })
+		env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+		sandboxCode := getWorkspaceCode(t, env.pool, sandboxID)
+
+		resp, body, _ := env.postCreateWithEnv(t, "dev", env.documentTypeCode, "ext-resolver-dev", "tx-resolver-dev", nil, nil, map[string]any{"test": true})
+		require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+		assert.Equal(t, entity.EnvironmentDev, receivedEnv)
+		assert.Equal(t, sandboxCode, receivedSandboxCode)
+	})
+
+	t.Run("prod environment reaches custom resolver without sandbox code", func(t *testing.T) {
+		var receivedEnv entity.Environment
+		var receivedSandboxCode string
+		resolver := resolverFunc(func(_ context.Context, req *port.TemplateResolverRequest, _ port.TemplateVersionSearchAdapter) (*string, error) {
+			receivedEnv = req.Environment
+			receivedSandboxCode = req.SandboxWorkspaceCode
+			return nil, nil
+		})
+
+		env := setupInternalCreateEnv(t, resolver, true)
+		env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+		resp, body, _ := env.postCreateWithEnv(t, "prod", env.documentTypeCode, "ext-resolver-prod", "tx-resolver-prod", nil, nil, map[string]any{"test": true})
+		require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+		assert.Equal(t, entity.EnvironmentProd, receivedEnv)
+		assert.Empty(t, receivedSandboxCode)
+	})
 }
 
 func setTemplateVersionContentInternal(t *testing.T, pool *pgxpool.Pool, versionID, content string) {

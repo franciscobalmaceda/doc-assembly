@@ -1,6 +1,9 @@
 package sdk
 
-import "github.com/rendis/doc-assembly/core/internal/core/port"
+import (
+	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/rendis/doc-assembly/core/internal/core/port"
+)
 
 // --- Core Extensibility Interfaces ---
 
@@ -105,3 +108,32 @@ type (
 
 // Registry types
 type GroupConfig = port.GroupConfig
+
+// Environment types
+type Environment = entity.Environment
+
+// Environment constants and helpers
+var (
+	EnvironmentProd        = entity.EnvironmentProd
+	EnvironmentDev         = entity.EnvironmentDev
+	ParseEnvironment       = entity.ParseEnvironment
+	EnvironmentFromSandbox = entity.EnvironmentFromSandbox
+)
+
+// SigningProvider request types
+type (
+	GetDocumentStatusRequest     = port.GetDocumentStatusRequest
+	CancelDocumentRequest        = port.CancelDocumentRequest
+	DownloadSignedPDFRequest     = port.DownloadSignedPDFRequest
+	GetEmbeddedSigningURLRequest = port.GetEmbeddedSigningURLRequest
+	ParseWebhookRequest          = port.ParseWebhookRequest
+)
+
+// StorageAdapter request types
+type (
+	StorageUploadRequest = port.StorageUploadRequest
+	StorageRequest       = port.StorageRequest
+)
+
+// PublicDocumentAccessAuthenticator request type
+type AuthenticateRequest = port.AuthenticateRequest

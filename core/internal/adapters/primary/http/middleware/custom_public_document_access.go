@@ -36,7 +36,10 @@ func CustomPublicDocumentAccess(auth port.PublicDocumentAccessAuthenticator) gin
 			return
 		}
 
-		claims, err := auth.Authenticate(c, documentID)
+		claims, err := auth.Authenticate(c, &port.AuthenticateRequest{
+			DocumentID:  documentID,
+			Environment: GetEnvironment(c),
+		})
 		if err != nil {
 			slog.InfoContext(c.Request.Context(), "custom public doc auth fallback",
 				slog.String("document_id", documentID),
