@@ -50,8 +50,8 @@ Out of scope:
 
 ## 4) Documentation alignment
 
-- Rewrote `core/docs/authentication-guide.md` to reflect current route/middleware architecture without render routes.
-- Removed render-auth extension example from `core/docs/extensibility-guide.md`.
+- Rewrote `docs/backend/authentication-guide.md` to reflect current route/middleware architecture without render routes.
+- Removed render-auth extension example from `docs/backend/extensibility-guide.md`.
 
 ---
 

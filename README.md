@@ -41,19 +41,19 @@ The platform is multi-tenant by design: a three-level RBAC model (System, Tenant
 
 ```plaintext
 doc-assembly/
-  apps/
-    doc-engine/     Go backend (Hexagonal Architecture, Gin, Wire DI)
-    web-client/     React SPA (TanStack Router, Zustand, TipTap)
-  db/               Liquibase migrations (PostgreSQL 16)
-  scripts/          Tooling (docml2json, etc.)
+  core/       Go backend (Hexagonal Architecture, Gin, Wire DI)
+  app/        React SPA (TanStack Router, Zustand, TipTap)
+  db/         Liquibase migrations (PostgreSQL 16)
+  docs/       All project documentation
+  scripts/    Tooling (docml2json, etc.)
 ```
 
-| Component      | Stack                                                    | Docs                                   |
-| -------------- | -------------------------------------------------------- | -------------------------------------- |
-| **doc-engine** | Go 1.25, Gin, pgx/v5, Wire                               | [AGENTS.md](apps/doc-engine/AGENTS.md) |
-| **web-client** | React 19, TypeScript, TanStack Router, Zustand, TipTap 3 | [AGENTS.md](apps/web-client/AGENTS.md) |
-| **db**         | Liquibase, PostgreSQL 16, pgcrypto                       | [DATABASE.md](db/DATABASE.md)          |
-| **scripts**    | Python 3 tooling                                         | [docml2json](scripts/docml2json/)      |
+| Component      | Stack                                                    | Docs                              |
+| -------------- | -------------------------------------------------------- | --------------------------------- |
+| **doc-engine** | Go 1.25, Gin, pgx/v5, Wire                               | [Backend docs](docs/backend/)     |
+| **web-client** | React 19, TypeScript, TanStack Router, Zustand, TipTap 3 | [Frontend docs](docs/frontend/)   |
+| **db**         | Liquibase, PostgreSQL 16, pgcrypto                       | [DATABASE.md](db/DATABASE.md)     |
+| **scripts**    | Python 3 tooling                                         | [docml2json](scripts/docml2json/) |
 
 ## Architecture
 
@@ -219,7 +219,7 @@ Template (published)
             -> Signing provider handles signature -> Webhooks update status -> Sealed PDF stored
 ```
 
-For detailed flow documentation with sequence diagrams, see **[Public Signing Flow](core/docs/public-signing-flow.md)**.
+For detailed flow documentation with sequence diagrams, see **[Public Signing Flow](docs/backend/public-signing-flow.md)**.
 
 ### Supported Providers
 
@@ -295,21 +295,22 @@ The container exposes port `8080`.
 
 ## Documentation
 
-| Document                            | Path                                                                                           |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Backend Architecture                | [`apps/doc-engine/docs/architecture.md`](apps/doc-engine/docs/architecture.md)                 |
-| Authentication Guide                | [`apps/doc-engine/docs/authentication-guide.md`](apps/doc-engine/docs/authentication-guide.md) |
-| Authorization Matrix                | [`apps/doc-engine/docs/authorization-matrix.md`](apps/doc-engine/docs/authorization-matrix.md) |
-| Public Signing Flow                 | [`core/docs/public-signing-flow.md`](core/docs/public-signing-flow.md)                         |
-| Template Preview Flow               | [`docs/template-preview-flow.md`](docs/template-preview-flow.md)                               |
-| Internal API Document Creation Flow | [`docs/internal-api-document-creation-flow.md`](docs/internal-api-document-creation-flow.md)   |
-| Public Signing Flow (Flow Detail)   | [`docs/public-signing-flow-detail.md`](docs/public-signing-flow-detail.md)                     |
-| Extensibility Guide                 | [`apps/doc-engine/docs/extensibility-guide.md`](apps/doc-engine/docs/extensibility-guide.md)   |
-| Frontend Architecture               | [`apps/web-client/docs/architecture.md`](apps/web-client/docs/architecture.md)                 |
-| Design System                       | [`apps/web-client/docs/design_system.md`](apps/web-client/docs/design_system.md)               |
-| Database Schema                     | [`db/DATABASE.md`](db/DATABASE.md)                                                             |
-| OpenAPI Spec                        | [`apps/doc-engine/docs/swagger.yaml`](apps/doc-engine/docs/swagger.yaml)                       |
-| docml2json Reference                | [`scripts/docml2json/DOCML-REFERENCIA.md`](scripts/docml2json/DOCML-REFERENCIA.md)             |
+| Document                            | Path                                                                                         |
+| ----------------------------------- | -------------------------------------------------------------------------------------------- |
+| Backend Architecture                | [`docs/backend/architecture.md`](docs/backend/architecture.md)                               |
+| Authentication Guide                | [`docs/backend/authentication-guide.md`](docs/backend/authentication-guide.md)               |
+| Authorization Matrix                | [`docs/backend/authorization-matrix.md`](docs/backend/authorization-matrix.md)               |
+| Public Signing Flow                 | [`docs/backend/public-signing-flow.md`](docs/backend/public-signing-flow.md)                 |
+| Template Preview Flow               | [`docs/template-preview-flow.md`](docs/template-preview-flow.md)                             |
+| Internal API Document Creation Flow | [`docs/internal-api-document-creation-flow.md`](docs/internal-api-document-creation-flow.md) |
+| Public Signing Flow (Flow Detail)   | [`docs/public-signing-flow-detail.md`](docs/public-signing-flow-detail.md)                   |
+| Extensibility Guide                 | [`docs/backend/extensibility-guide.md`](docs/backend/extensibility-guide.md)                 |
+| Worker Queue Guide (River)          | [`docs/backend/worker-queue-guide.md`](docs/backend/worker-queue-guide.md)                   |
+| Frontend Architecture               | [`docs/frontend/architecture.md`](docs/frontend/architecture.md)                             |
+| Design System                       | [`docs/frontend/design-system.md`](docs/frontend/design-system.md)                           |
+| Database Schema                     | [`db/DATABASE.md`](db/DATABASE.md)                                                           |
+| OpenAPI Spec                        | [`core/docs/swagger.yaml`](core/docs/swagger.yaml)                                           |
+| docml2json Reference                | [`scripts/docml2json/DOCML-REFERENCIA.md`](scripts/docml2json/DOCML-REFERENCIA.md)           |
 
 ## License
 

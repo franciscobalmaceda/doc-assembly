@@ -48,7 +48,7 @@ Doc Engine is a Go-based microservice that provides:
 
 The project follows **Hexagonal Architecture** (Ports and Adapters) with domain-based organization.
 
-For detailed architecture documentation including directory structure, domain organization, and entity files, see **[docs/architecture.md](docs/architecture.md)**.
+For detailed architecture documentation including directory structure, domain organization, and entity files, see **[docs/backend/architecture.md](../docs/backend/architecture.md)**.
 
 ## Tech Stack
 
@@ -190,19 +190,19 @@ Copy `.env.example` to `.env` and configure the required values.
 
 ## API Endpoints
 
-For a complete list of API endpoints, authentication requirements, roles, and required headers, see **[docs/authorization-matrix.md](docs/authorization-matrix.md)**.
+For a complete list of API endpoints, authentication requirements, roles, and required headers, see **[docs/backend/authorization-matrix.md](../docs/backend/authorization-matrix.md)**.
 
 ## Public Signing Flow
 
 Documents use a shared public URL with email verification. Recipients enter their email to receive a token-based signing link. The flow supports two paths: direct signing (no interactive fields) and form-first signing (with interactive fields).
 
-For detailed documentation including sequence diagrams, security measures, and configuration, see **[docs/public-signing-flow.md](docs/public-signing-flow.md)**.
+For detailed documentation including sequence diagrams, security measures, and configuration, see **[docs/backend/public-signing-flow.md](../docs/backend/public-signing-flow.md)**.
 
 ## Sandbox & Promotion
 
 Doc Engine supports sandbox environments for template development and testing before promoting to production.
 
-For complete documentation on sandbox mode, promotion flow, and examples, see **[docs/sandbox-promotion.md](docs/sandbox-promotion.md)**.
+For complete documentation on sandbox mode, promotion flow, and examples, see **[docs/backend/sandbox-promotion.md](../docs/backend/sandbox-promotion.md)**.
 
 ## Development
 
@@ -230,23 +230,23 @@ make dev              # Run with hot reload (requires air)
 
 The project uses golangci-lint with errcheck, gosimple, govet, staticcheck, unused, gofmt, goimports, misspell, gocritic, revive, gosec, errorlint, exhaustive.
 
-Run `make lint` before committing. For comprehensive Go coding standards, see **[docs/go-best-practices.md](docs/go-best-practices.md)**.
+Run `make lint` before committing. For comprehensive Go coding standards, see **[docs/backend/go-best-practices.md](../docs/backend/go-best-practices.md)**.
 
 ### Logging
 
-The project uses Go's standard `log/slog` package with a context-based handler. For complete documentation, see **[docs/logging-guide.md](docs/logging-guide.md)**.
+The project uses Go's standard `log/slog` package with a context-based handler. For complete documentation, see **[docs/backend/logging-guide.md](../docs/backend/logging-guide.md)**.
 
 ## Extensibility
 
 Doc Engine supports custom **injectors**, **mappers**, and **init functions** to extend document generation with business-specific logic.
 
-For complete documentation including creating injectors, mappers, init functions, and i18n, see **[docs/extensibility-guide.md](docs/extensibility-guide.md)**.
+For complete documentation including creating injectors, mappers, init functions, and i18n, see **[docs/backend/extensibility-guide.md](../docs/backend/extensibility-guide.md)**.
 
 ## Integration Tests
 
 Integration tests validate repository operations against a real PostgreSQL database using Testcontainers.
 
-For complete documentation including setup, running tests, and troubleshooting, see **[docs/integration-tests.md](docs/integration-tests.md)**.
+For complete documentation including setup, running tests, and troubleshooting, see **[docs/backend/integration-tests.md](../docs/backend/integration-tests.md)**.
 
 ## Role-Based Access Control
 
@@ -260,4 +260,4 @@ Workspace roles hierarchy (highest to lowest):
 | OPERATOR | 20     | Generate documents       |
 | VIEWER   | 10     | Read-only access         |
 
-For a complete authorization matrix with all endpoints, roles (System, Tenant, Workspace), and required headers, see **[docs/authorization-matrix.md](docs/authorization-matrix.md)**.
+For a complete authorization matrix with all endpoints, roles (System, Tenant, Workspace), and required headers, see **[docs/backend/authorization-matrix.md](../docs/backend/authorization-matrix.md)**.

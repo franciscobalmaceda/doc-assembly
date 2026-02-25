@@ -25,10 +25,10 @@ Add the MCP server using the CLI:
 
 ```bash
 # Local scope (current project only, stored in ~/.claude.json)
-claude mcp add doc-engine-api -- npx -y mcp-openapi-schema /path/to/docs/swagger.yaml
+claude mcp add doc-engine-api -- npx -y mcp-openapi-schema /path/to/core/docs/swagger.yaml
 
 # Project scope (shared via .mcp.json in repo)
-claude mcp add doc-engine-api -s project -- npx -y mcp-openapi-schema ./docs/swagger.yaml
+claude mcp add doc-engine-api -s project -- npx -y mcp-openapi-schema ./core/docs/swagger.yaml
 
 # User scope (available in all projects)
 claude mcp add doc-engine-api -s user -- npx -y mcp-openapi-schema /absolute/path/to/swagger.yaml
@@ -56,7 +56,7 @@ Edit `~/.codex/config.toml`:
 ```toml
 [mcp_servers.doc-engine-api]
 command = "npx"
-args = ["-y", "mcp-openapi-schema", "/path/to/docs/swagger.yaml"]
+args = ["-y", "mcp-openapi-schema", "/path/to/core/docs/swagger.yaml"]
 
 # Optional settings
 startup_timeout_sec = 30
@@ -66,7 +66,7 @@ tool_timeout_sec = 60
 **Via CLI:**
 
 ```bash
-codex mcp add doc-engine-api -- npx -y mcp-openapi-schema /path/to/docs/swagger.yaml
+codex mcp add doc-engine-api -- npx -y mcp-openapi-schema /path/to/core/docs/swagger.yaml
 ```
 
 ---
@@ -80,7 +80,7 @@ Edit `~/.gemini/settings.json` (global) or `.gemini/settings.json` (project):
   "mcpServers": {
     "doc-engine-api": {
       "command": "npx",
-      "args": ["-y", "mcp-openapi-schema", "/path/to/docs/swagger.yaml"]
+      "args": ["-y", "mcp-openapi-schema", "/path/to/core/docs/swagger.yaml"]
     }
   }
 }

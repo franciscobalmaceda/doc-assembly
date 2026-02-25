@@ -130,7 +130,7 @@ export default defineConfig({
 
 ### src/index.css
 
-> **Documentación completa de tokens de diseño:** `docs/design_system.md`
+> **Documentación completa de tokens de diseño:** `design-system.md`
 
 Estructura del archivo:
 - `@import "tailwindcss"` + plugins (typography, animate)
@@ -243,7 +243,7 @@ export const Button = ({ className, variant, size, ...props }: ButtonProps) => (
 )
 ```
 
-> **Variantes específicas:** Ver `docs/design_system.md` sección Componentes > Botones
+> **Variantes específicas:** Ver `design-system.md` sección Componentes > Botones
 
 ### Componente de Feature
 
@@ -370,7 +370,7 @@ VITE_USE_MOCK_AUTH=false
 - Usar Tailwind CSS para todos los estilos
 - Usar `cn()` para combinar clases condicionales
 - No usar CSS modules ni styled-components
-- **Ver `docs/design_system.md`** para tokens y patrones visuales
+- **Ver `design-system.md`** para tokens y patrones visuales
 
 ---
 
@@ -403,13 +403,13 @@ VITE_USE_MOCK_AUTH=false
 
 | Documento | Contenido |
 |-----------|-----------|
-| `docs/design_system.md` | Filosofía visual, colores, tipografía, componentes, espaciado |
+| `design-system.md` | Filosofía visual, colores, tipografía, componentes, espaciado |
 | `src/components/ui/` | Componentes base reutilizables (Button, Input, Card, Dialog...) |
 | `AGENTS.md` | Instrucciones para agentes IA |
 
 ### Proceso para Crear Componentes
 
-1. **Revisar `docs/design_system.md`** para entender el estilo visual
+1. **Revisar `design-system.md`** para entender el estilo visual
 2. **Reutilizar componentes** de `src/components/ui/` cuando sea posible
 3. **Seguir patrones de código** de esta guía (`cva`, `cn`, tipos TypeScript)
 
