@@ -340,7 +340,7 @@ function SelectTenantPage() {
           </div>
 
           {/* List */}
-          <div className="flex w-full flex-col justify-start" style={{ height: `${LIST_MIN_HEIGHT}px` }}>
+          <div className="flex w-full flex-col justify-start" style={{ minHeight: `${LIST_MIN_HEIGHT}px` }}>
             <AnimatePresence mode="wait">
               {selectedTenant ? (
                 // Workspaces list
