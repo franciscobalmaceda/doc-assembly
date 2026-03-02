@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { useToast } from '@/components/ui/use-toast'
 import type { AutomationKey } from '../api/automation-keys-api'
 import { useUpdateAutomationKey } from '../hooks/useAutomationKeys'
+import { TenantMultiSelect } from './TenantMultiSelect'
 
 interface ApiKeyEditDialogProps {
   open: boolean
@@ -41,6 +42,7 @@ function ApiKeyEditDialogContent({
   const { toast } = useToast()
   const [name, setName] = useState(keyData.name)
   const [nameError, setNameError] = useState('')
+  const [selectedTenants, setSelectedTenants] = useState<string[]>(keyData.allowedTenants ?? [])
   const updateKey = useUpdateAutomationKey()
 
   const isLoading = updateKey.isPending
@@ -59,7 +61,13 @@ function ApiKeyEditDialogContent({
     if (!validateForm()) return
 
     try {
-      await updateKey.mutateAsync({ id: keyData.id, data: { name: name.trim() } })
+      await updateKey.mutateAsync({
+        id: keyData.id,
+        data: {
+          name: name.trim(),
+          allowedTenants: selectedTenants.length > 0 ? selectedTenants : [],
+        },
+      })
       toast({ title: t('administration.apiKeys.updateSuccess', 'API key updated') })
       onClose()
     } catch {
@@ -106,6 +114,12 @@ function ApiKeyEditDialogContent({
           />
           {nameError && <p className="mt-1 text-xs text-destructive">{nameError}</p>}
         </div>
+
+        <TenantMultiSelect
+          value={selectedTenants}
+          onChange={setSelectedTenants}
+          disabled={isLoading}
+        />
 
         <DialogFooter>
           <button

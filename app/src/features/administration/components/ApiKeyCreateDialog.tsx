@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { useToast } from '@/components/ui/use-toast'
 import type { CreateAutomationKeyResponse } from '../api/automation-keys-api'
 import { useCreateAutomationKey } from '../hooks/useAutomationKeys'
+import { TenantMultiSelect } from './TenantMultiSelect'
 
 interface ApiKeyCreateDialogProps {
   open: boolean
@@ -41,6 +42,7 @@ function ApiKeyCreateDialogContent({
   const { toast } = useToast()
   const [name, setName] = useState('')
   const [nameError, setNameError] = useState('')
+  const [selectedTenants, setSelectedTenants] = useState<string[]>([])
   const createKey = useCreateAutomationKey()
 
   const isLoading = createKey.isPending
@@ -59,7 +61,10 @@ function ApiKeyCreateDialogContent({
     if (!validateForm()) return
 
     try {
-      const result = await createKey.mutateAsync({ name: name.trim() })
+      const result = await createKey.mutateAsync({
+        name: name.trim(),
+        ...(selectedTenants.length > 0 && { allowedTenants: selectedTenants }),
+      })
       onOpenChange(false)
       onCreated(result)
     } catch {
@@ -108,12 +113,11 @@ function ApiKeyCreateDialogContent({
           {nameError && <p className="mt-1 text-xs text-destructive">{nameError}</p>}
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          {t(
-            'administration.apiKeys.form.allowedTenantsHint',
-            'Leave empty for global access (all tenants).'
-          )}
-        </p>
+        <TenantMultiSelect
+          value={selectedTenants}
+          onChange={setSelectedTenants}
+          disabled={isLoading}
+        />
 
         <DialogFooter>
           <button
