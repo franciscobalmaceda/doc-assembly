@@ -28,6 +28,7 @@ type Document struct {
 	SupersededByDocumentID    *string         `json:"supersededByDocumentId,omitempty"`
 	SupersedeReason           *string         `json:"supersedeReason,omitempty"`
 	ExpiresAt                 *time.Time      `json:"expiresAt,omitempty"`
+	Metadata                  json.RawMessage `json:"metadata,omitempty"`
 	RetryCount                int             `json:"retryCount"`
 	LastRetryAt               *time.Time      `json:"lastRetryAt,omitempty"`
 	NextRetryAt               *time.Time      `json:"nextRetryAt,omitempty"`
@@ -123,6 +124,17 @@ func (d *Document) SetPDFPath(path string) {
 func (d *Document) SetCompletedPDFURL(url string) {
 	d.CompletedPDFURL = &url
 	d.touch()
+}
+
+// SetMetadata marshals and sets the metadata from a map.
+func (d *Document) SetMetadata(m map[string]string) error {
+	data, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	d.Metadata = data
+	d.touch()
+	return nil
 }
 
 // SetExpiresAt sets the expiration timestamp for the document.

@@ -59,6 +59,7 @@ func scanDocument(row pgx.Row) (*entity.Document, error) {
 		&doc.SupersededByDocumentID,
 		&doc.SupersedeReason,
 		&doc.ExpiresAt,
+		&doc.Metadata,
 		&doc.RetryCount,
 		&doc.LastRetryAt,
 		&doc.NextRetryAt,
@@ -94,6 +95,7 @@ func scanDocumentRows(rows pgx.Rows) ([]*entity.Document, error) {
 			&doc.SupersededByDocumentID,
 			&doc.SupersedeReason,
 			&doc.ExpiresAt,
+			&doc.Metadata,
 			&doc.RetryCount,
 			&doc.LastRetryAt,
 			&doc.NextRetryAt,
@@ -130,6 +132,7 @@ func (r *Repository) Create(ctx context.Context, document *entity.Document) (str
 		document.SupersededByDocumentID,
 		document.SupersedeReason,
 		document.ExpiresAt,
+		document.Metadata,
 		document.CreatedAt,
 	).Scan(&id)
 	if err != nil {
@@ -436,6 +439,7 @@ func (r *Repository) updateWith(ctx context.Context, db DBTX, document *entity.D
 		document.SupersededByDocumentID,
 		document.SupersedeReason,
 		document.ExpiresAt,
+		document.Metadata,
 		document.RetryCount,
 		document.LastRetryAt,
 		document.NextRetryAt,

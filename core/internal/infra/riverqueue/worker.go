@@ -2,6 +2,7 @@ package riverqueue
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -55,9 +56,10 @@ func buildCompletedEvent(ctx context.Context, pool *pgxpool.Pool, documentID str
 
 	// Fetch document with workspace and tenant codes.
 	var isSandbox bool
+	var rawMetadata json.RawMessage
 	err := pool.QueryRow(ctx, `
 		SELECT d.id, d.status, d.client_external_reference_id, d.title,
-		       d.created_at, d.updated_at, d.expires_at,
+		       d.created_at, d.updated_at, d.expires_at, d.metadata,
 		       w.code AS workspace_code, w.is_sandbox, t.code AS tenant_code
 		FROM execution.documents d
 		JOIN tenancy.workspaces w ON w.id = d.workspace_id
@@ -71,6 +73,7 @@ func buildCompletedEvent(ctx context.Context, pool *pgxpool.Pool, documentID str
 		&event.CreatedAt,
 		&event.UpdatedAt,
 		&event.ExpiresAt,
+		&rawMetadata,
 		&event.WorkspaceCode,
 		&isSandbox,
 		&event.TenantCode,
@@ -79,6 +82,12 @@ func buildCompletedEvent(ctx context.Context, pool *pgxpool.Pool, documentID str
 		return event, fmt.Errorf("querying document %s: %w", documentID, err)
 	}
 	event.Environment = entity.EnvironmentFromSandbox(isSandbox)
+
+	if len(rawMetadata) > 0 {
+		if err := json.Unmarshal(rawMetadata, &event.Metadata); err != nil {
+			return event, fmt.Errorf("unmarshalling metadata for document %s: %w", documentID, err)
+		}
+	}
 
 	// Fetch recipients with role information.
 	rows, err := pool.Query(ctx, `

@@ -32,6 +32,7 @@ type DocumentCompletedEvent struct {
 	CreatedAt     time.Time
 	UpdatedAt     *time.Time
 	ExpiresAt     *time.Time
+	Metadata      map[string]string
 	Recipients    []CompletedRecipient
 }
 

@@ -150,6 +150,7 @@ func (c *InternalDocumentController) CreateDocument(ctx *gin.Context) {
 		Environment:     env,
 		ForceCreate:     forceCreate,
 		SupersedeReason: req.SupersedeReason,
+		Metadata:        req.Metadata,
 		Headers:         headers,
 		PayloadRaw:      req.Payload,
 	}

@@ -8,9 +8,10 @@ import (
 
 // InternalCreateDocumentRequest is the new contract for internal create.
 type InternalCreateDocumentRequest struct {
-	ForceCreate     *bool           `json:"forceCreate,omitempty"`
-	SupersedeReason *string         `json:"supersedeReason,omitempty"`
-	Payload         json.RawMessage `json:"payload"`
+	ForceCreate     *bool             `json:"forceCreate,omitempty"`
+	SupersedeReason *string           `json:"supersedeReason,omitempty"`
+	Payload         json.RawMessage   `json:"payload"`
+	Metadata        map[string]string `json:"metadata,omitempty"`
 }
 
 // InternalCreateDocumentResponse is the response for document creation via internal API.

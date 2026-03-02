@@ -276,6 +276,12 @@ func (s *InternalDocumentService) buildInternalDocument(
 	doc.SetExternalReference(cmd.ExternalID)
 	doc.SetTransactionalID(cmd.TransactionalID)
 
+	if len(cmd.Metadata) > 0 {
+		if err := doc.SetMetadata(cmd.Metadata); err != nil {
+			return nil, fmt.Errorf("setting metadata: %w", err)
+		}
+	}
+
 	if err := doc.SetInjectedValuesSnapshot(prepared.ResolvedValues); err != nil {
 		return nil, fmt.Errorf("setting injected values snapshot: %w", err)
 	}

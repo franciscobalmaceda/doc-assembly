@@ -67,13 +67,13 @@ const (
 			transactional_id, operation_type, related_document_id,
 			signer_document_id, signer_provider, status, injected_values_snapshot,
 			pdf_storage_path, completed_pdf_url, is_active, superseded_at,
-			superseded_by_document_id, supersede_reason, expires_at, created_at
+			superseded_by_document_id, supersede_reason, expires_at, metadata, created_at
 		) VALUES (
 			$1, $2, $3, $4, $5,
 			$6, $7, $8,
 			$9, $10, $11, $12,
 			$13, $14, $15, $16,
-			$17, $18, $19, $20
+			$17, $18, $19, $20, $21
 		)
 		RETURNING id
 	`
@@ -216,6 +216,7 @@ func (r *Repository) internalCreateOrReplayTx(ctx context.Context, tx pgx.Tx, re
 		doc.SupersededByDocumentID,
 		doc.SupersedeReason,
 		doc.ExpiresAt,
+		doc.Metadata,
 		doc.CreatedAt,
 	).Scan(&createdDocID); err != nil {
 		return nil, fmt.Errorf("creating internal document: %w", err)

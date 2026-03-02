@@ -18,6 +18,7 @@ type InternalCreateCommand struct {
 	Environment     entity.Environment // From header X-Environment
 	ForceCreate     bool               // Optional body field. Defaults to false.
 	SupersedeReason *string            // Optional body field.
+	Metadata        map[string]string  // Optional body field. Round-trip metadata returned in completion event.
 	Headers         map[string]string  // All HTTP headers
 	PayloadRaw      []byte             // Unparsed payload object (passed to Mapper)
 }
