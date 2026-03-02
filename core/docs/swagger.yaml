@@ -60,6 +60,120 @@ definitions:
     required:
     - role
     type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationAssignDocumentTypeRequest:
+    properties:
+      documentTypeId:
+        type: string
+    required:
+    - documentTypeId
+    type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationAuditLogResponse:
+    properties:
+      action:
+        type: string
+      apiKeyId:
+        type: string
+      apiKeyPrefix:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      method:
+        type: string
+      path:
+        type: string
+      requestBody:
+        items:
+          type: integer
+        type: array
+      resourceId:
+        type: string
+      resourceType:
+        type: string
+      responseStatus:
+        type: integer
+      tenantId:
+        type: string
+      workspaceId:
+        type: string
+    type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateTemplateRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateVersionRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateWorkspaceRequest:
+    properties:
+      code:
+        description: Optional; auto-generated from name if not provided.
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationKeyResponse:
+    properties:
+      allowedTenants:
+        items:
+          type: string
+        type: array
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      id:
+        type: string
+      isActive:
+        type: boolean
+      keyPrefix:
+        type: string
+      lastUsedAt:
+        type: string
+      name:
+        type: string
+      revokedAt:
+        type: string
+    type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateTemplateRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateVersionContentRequest:
+    properties:
+      contentStructure:
+        items:
+          type: integer
+        type: array
+    required:
+    - contentStructure
+    type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateVersionRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
   github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BatchCreateDocumentRequest:
     properties:
       documents:
@@ -145,6 +259,39 @@ definitions:
         type: string
     required:
     - scopeType
+    type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateAutomationKeyRequest:
+    properties:
+      allowedTenants:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateAutomationKeyResponse:
+    properties:
+      allowedTenants:
+        items:
+          type: string
+        type: array
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      id:
+        type: string
+      isActive:
+        type: boolean
+      keyPrefix:
+        type: string
+      name:
+        type: string
+      rawKey:
+        description: shown exactly once
+        type: string
     type: object
   github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateDocumentRequest:
     properties:
@@ -238,6 +385,12 @@ definitions:
         type: string
       isPublicLibrary:
         type: boolean
+      process:
+        description: defaults to "default"
+        type: string
+      processType:
+        description: defaults to "CANONICAL_NAME"
+        type: string
       title:
         maxLength: 255
         minLength: 1
@@ -676,6 +829,33 @@ definitions:
       total:
         type: integer
     type: object
+  ? github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_AutomationAuditLogResponse
+  : properties:
+      count:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationAuditLogResponse'
+        type: array
+    type: object
+  ? github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_AutomationKeyResponse
+  : properties:
+      count:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationKeyResponse'
+        type: array
+    type: object
+  ? github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_DocumentTypeResponse
+  : properties:
+      count:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeResponse'
+        type: array
+    type: object
   ? github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_FolderResponse
   : properties:
       count:
@@ -712,6 +892,15 @@ definitions:
           $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TagWithCountResponse'
         type: array
     type: object
+  ? github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_TemplateListItemResponse
+  : properties:
+      count:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateListItemResponse'
+        type: array
+    type: object
   ? github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_TenantMemberResponse
   : properties:
       count:
@@ -719,6 +908,24 @@ definitions:
       data:
         items:
           $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberResponse'
+        type: array
+    type: object
+  ? github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_TenantResponse
+  : properties:
+      count:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse'
+        type: array
+    type: object
+  ? github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_WorkspaceResponse
+  : properties:
+      count:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse'
         type: array
     type: object
   github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListSystemInjectablesResponse:
@@ -954,6 +1161,20 @@ definitions:
     required:
     - publishAt
     type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SetProcessFieldsRequest:
+    properties:
+      process:
+        maxLength: 255
+        type: string
+      processType:
+        enum:
+        - ID
+        - CANONICAL_NAME
+        type: string
+    required:
+    - process
+    - processType
+    type: object
   github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SigningURLResponse:
     properties:
       expiresAt:
@@ -1100,6 +1321,10 @@ definitions:
         type: string
       isPublicLibrary:
         type: boolean
+      process:
+        type: string
+      processType:
+        type: string
       publishedVersionNumber:
         type: integer
       scheduledVersionCount:
@@ -1133,6 +1358,10 @@ definitions:
         type: string
       isPublicLibrary:
         type: boolean
+      process:
+        type: string
+      processType:
+        type: string
       title:
         type: string
       updatedAt:
@@ -1309,6 +1538,10 @@ definitions:
         type: string
       isPublicLibrary:
         type: boolean
+      process:
+        type: string
+      processType:
+        type: string
       tags:
         items:
           $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TagResponse'
@@ -1342,6 +1575,10 @@ definitions:
         type: string
       isPublicLibrary:
         type: boolean
+      process:
+        type: string
+      processType:
+        type: string
       publishedVersion:
         $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse'
       tags:
@@ -1427,6 +1664,15 @@ definitions:
       status:
         type: string
       updatedAt:
+        type: string
+    type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateAutomationKeyRequest:
+    properties:
+      allowedTenants:
+        items:
+          type: string
+        type: array
+      name:
         type: string
     type: object
   github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateDocumentTypeRequest:
@@ -1949,6 +2195,867 @@ info:
   title: Doc Engine API
   version: "1.0"
 paths:
+  /admin/automation-keys/:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_AutomationKeyResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List automation API keys
+      tags:
+      - Automation Keys
+    post:
+      consumes:
+      - application/json
+      description: Creates a new API key. The raw key is returned ONLY in this response.
+      parameters:
+      - description: API key data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateAutomationKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateAutomationKeyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create automation API key
+      tags:
+      - Automation Keys
+  /admin/automation-keys/{id}:
+    delete:
+      parameters:
+      - description: API Key ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Revoke automation API key
+      tags:
+      - Automation Keys
+    get:
+      parameters:
+      - description: API Key ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationKeyResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get automation API key
+      tags:
+      - Automation Keys
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: API Key ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Key data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateAutomationKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationKeyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update automation API key
+      tags:
+      - Automation Keys
+  /admin/automation-keys/{id}/audit:
+    get:
+      parameters:
+      - description: API Key ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 20
+        description: Limit results
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset results
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_AutomationAuditLogResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get audit log for API key
+      tags:
+      - Automation Keys
+  /api/v1/automation/document-types:
+    get:
+      parameters:
+      - description: Tenant ID
+        in: query
+        name: tenantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_DocumentTypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: List document types
+      tags:
+      - Automation
+  /api/v1/automation/templates/{templateId}/document-type:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Document type assignment
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationAssignDocumentTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AssignDocumentTypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: Assign document type to template
+      tags:
+      - Automation
+  /api/v1/automation/templates/{templateId}/process:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Process fields
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SetProcessFieldsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: Set process fields on template
+      tags:
+      - Automation
+  /api/v1/automation/templates/{templateId}/versions:
+    get:
+      parameters:
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListTemplateVersionsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: List template versions
+      tags:
+      - Automation
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Version data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateVersionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: Create template version
+      tags:
+      - Automation
+  /api/v1/automation/templates/{templateId}/versions/{versionId}:
+    get:
+      parameters:
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Version ID
+        in: path
+        name: versionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: Get template version
+      tags:
+      - Automation
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Version ID
+        in: path
+        name: versionId
+        required: true
+        type: string
+      - description: Version data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateVersionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: Update template version
+      tags:
+      - Automation
+  /api/v1/automation/templates/{templateId}/versions/{versionId}/archive:
+    post:
+      parameters:
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Version ID
+        in: path
+        name: versionId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: Archive template version
+      tags:
+      - Automation
+  /api/v1/automation/templates/{templateId}/versions/{versionId}/content:
+    get:
+      parameters:
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Version ID
+        in: path
+        name: versionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: Get version content
+      tags:
+      - Automation
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Version ID
+        in: path
+        name: versionId
+        required: true
+        type: string
+      - description: Content structure
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateVersionContentRequest'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: Update version content
+      tags:
+      - Automation
+  /api/v1/automation/templates/{templateId}/versions/{versionId}/publish:
+    post:
+      parameters:
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Version ID
+        in: path
+        name: versionId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: Publish template version
+      tags:
+      - Automation
+  /api/v1/automation/tenants:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_TenantResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: List tenants
+      tags:
+      - Automation
+  /api/v1/automation/tenants/{tenantId}/workspaces:
+    get:
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_WorkspaceResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: List workspaces in tenant
+      tags:
+      - Automation
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      - description: Workspace data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateWorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: Create workspace in tenant
+      tags:
+      - Automation
+  /api/v1/automation/workspaces/{workspaceId}/injectables:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: Enable sandbox mode
+        in: header
+        name: X-Sandbox-Mode
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListInjectablesResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: List injectables in workspace
+      tags:
+      - Automation
+  /api/v1/automation/workspaces/{workspaceId}/templates:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: Enable sandbox mode
+        in: header
+        name: X-Sandbox-Mode
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_TemplateListItemResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: List templates in workspace
+      tags:
+      - Automation
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: Enable sandbox mode
+        in: header
+        name: X-Sandbox-Mode
+        type: string
+      - description: Process identifier
+        in: header
+        name: X-Process
+        type: string
+      - description: Process type
+        in: header
+        name: X-Process-Type
+        type: string
+      - description: Template data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateCreateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: Create template in workspace
+      tags:
+      - Automation
+  /api/v1/automation/workspaces/{workspaceId}/templates/{templateId}:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Enable sandbox mode
+        in: header
+        name: X-Sandbox-Mode
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateWithDetailsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: Get template
+      tags:
+      - Automation
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Enable sandbox mode
+        in: header
+        name: X-Sandbox-Mode
+        type: string
+      - description: Template data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      security:
+      - AutomationKey: []
+      summary: Update template
+      tags:
+      - Automation
   /api/v1/content/injectables:
     get:
       consumes:
@@ -2331,6 +3438,53 @@ paths:
           schema:
             $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
       summary: Assign document type to template
+      tags:
+      - Templates
+  /api/v1/content/templates/{templateId}/process:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: header
+        name: X-Workspace-ID
+        required: true
+        type: string
+      - description: Enable sandbox mode (operates on sandbox workspace)
+        in: header
+        name: X-Sandbox-Mode
+        type: string
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Process fields
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SetProcessFieldsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      summary: Set process fields on template
       tags:
       - Templates
   /api/v1/content/templates/{templateId}/tags:
@@ -6443,6 +7597,11 @@ paths:
       tags:
       - Webhooks
 securityDefinitions:
+  AutomationKey:
+    description: Automation API key for programmatic access
+    in: header
+    name: X-Automation-Key
+    type: apiKey
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token
     in: header

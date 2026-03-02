@@ -143,6 +143,13 @@ func (ctrl *AutomationController) checkTenantAccess(c *gin.Context, tenantID str
 // --- Tenant Handlers ---
 
 // listTenants lists tenants (filtered by allowedTenants if the key is restricted).
+// @Summary List tenants
+// @Tags Automation
+// @Produce json
+// @Success 200 {object} dto.ListResponse[dto.TenantResponse]
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /api/v1/automation/tenants [get]
+// @Security AutomationKey
 func (ctrl *AutomationController) listTenants(c *gin.Context) {
 	filters := port.TenantFilters{
 		Limit:  100,
@@ -178,6 +185,15 @@ func (ctrl *AutomationController) listTenants(c *gin.Context) {
 // --- Workspace Handlers ---
 
 // listWorkspaces lists workspaces for a tenant.
+// @Summary List workspaces in tenant
+// @Tags Automation
+// @Produce json
+// @Param tenantId path string true "Tenant ID"
+// @Success 200 {object} dto.ListResponse[dto.WorkspaceResponse]
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Router /api/v1/automation/tenants/{tenantId}/workspaces [get]
+// @Security AutomationKey
 func (ctrl *AutomationController) listWorkspaces(c *gin.Context) {
 	tenantID := c.Param("tenantId")
 	if !ctrl.checkTenantAccess(c, tenantID) {
@@ -201,6 +217,18 @@ func (ctrl *AutomationController) listWorkspaces(c *gin.Context) {
 }
 
 // createWorkspace creates a new workspace in a tenant.
+// @Summary Create workspace in tenant
+// @Tags Automation
+// @Accept json
+// @Produce json
+// @Param tenantId path string true "Tenant ID"
+// @Param request body dto.AutomationCreateWorkspaceRequest true "Workspace data"
+// @Success 201 {object} dto.WorkspaceResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Router /api/v1/automation/tenants/{tenantId}/workspaces [post]
+// @Security AutomationKey
 func (ctrl *AutomationController) createWorkspace(c *gin.Context) {
 	tenantID := c.Param("tenantId")
 	if !ctrl.checkTenantAccess(c, tenantID) {
@@ -239,6 +267,15 @@ func (ctrl *AutomationController) createWorkspace(c *gin.Context) {
 // --- Injectable Handlers ---
 
 // listInjectables lists all injectables for a workspace.
+// @Summary List injectables in workspace
+// @Tags Automation
+// @Produce json
+// @Param workspaceId path string true "Workspace ID"
+// @Param X-Sandbox-Mode header string false "Enable sandbox mode"
+// @Success 200 {object} dto.ListInjectablesResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /api/v1/automation/workspaces/{workspaceId}/injectables [get]
+// @Security AutomationKey
 func (ctrl *AutomationController) listInjectables(c *gin.Context) {
 	workspaceID, _ := middleware.GetWorkspaceID(c)
 
@@ -256,6 +293,15 @@ func (ctrl *AutomationController) listInjectables(c *gin.Context) {
 // --- Template Handlers ---
 
 // listTemplates lists all templates in a workspace.
+// @Summary List templates in workspace
+// @Tags Automation
+// @Produce json
+// @Param workspaceId path string true "Workspace ID"
+// @Param X-Sandbox-Mode header string false "Enable sandbox mode"
+// @Success 200 {object} dto.ListResponse[dto.TemplateListItemResponse]
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /api/v1/automation/workspaces/{workspaceId}/templates [get]
+// @Security AutomationKey
 func (ctrl *AutomationController) listTemplates(c *gin.Context) {
 	workspaceID, _ := middleware.GetWorkspaceID(c)
 
@@ -269,6 +315,20 @@ func (ctrl *AutomationController) listTemplates(c *gin.Context) {
 }
 
 // createTemplate creates a new template in a workspace.
+// @Summary Create template in workspace
+// @Tags Automation
+// @Accept json
+// @Produce json
+// @Param workspaceId path string true "Workspace ID"
+// @Param X-Sandbox-Mode header string false "Enable sandbox mode"
+// @Param X-Process header string false "Process identifier"
+// @Param X-Process-Type header string false "Process type"
+// @Param request body dto.AutomationCreateTemplateRequest true "Template data"
+// @Success 201 {object} dto.TemplateCreateResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /api/v1/automation/workspaces/{workspaceId}/templates [post]
+// @Security AutomationKey
 func (ctrl *AutomationController) createTemplate(c *gin.Context) {
 	workspaceID, _ := middleware.GetWorkspaceID(c)
 
@@ -296,6 +356,17 @@ func (ctrl *AutomationController) createTemplate(c *gin.Context) {
 }
 
 // getTemplate retrieves a template with its details.
+// @Summary Get template
+// @Tags Automation
+// @Produce json
+// @Param workspaceId path string true "Workspace ID"
+// @Param templateId path string true "Template ID"
+// @Param X-Sandbox-Mode header string false "Enable sandbox mode"
+// @Success 200 {object} dto.TemplateWithDetailsResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/automation/workspaces/{workspaceId}/templates/{templateId} [get]
+// @Security AutomationKey
 func (ctrl *AutomationController) getTemplate(c *gin.Context) {
 	templateID := c.Param("templateId")
 
@@ -309,6 +380,20 @@ func (ctrl *AutomationController) getTemplate(c *gin.Context) {
 }
 
 // updateTemplate partially updates a template's metadata.
+// @Summary Update template
+// @Tags Automation
+// @Accept json
+// @Produce json
+// @Param workspaceId path string true "Workspace ID"
+// @Param templateId path string true "Template ID"
+// @Param X-Sandbox-Mode header string false "Enable sandbox mode"
+// @Param request body dto.AutomationUpdateTemplateRequest true "Template data"
+// @Success 200 {object} dto.TemplateResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/automation/workspaces/{workspaceId}/templates/{templateId} [patch]
+// @Security AutomationKey
 func (ctrl *AutomationController) updateTemplate(c *gin.Context) {
 	templateID := c.Param("templateId")
 
@@ -337,6 +422,16 @@ func (ctrl *AutomationController) updateTemplate(c *gin.Context) {
 // listDocumentTypes lists all document types.
 // Since no tenantId is provided in this route, we return all accessible types.
 // For simplicity, we accept an optional tenantId query parameter.
+// @Summary List document types
+// @Tags Automation
+// @Produce json
+// @Param tenantId query string true "Tenant ID"
+// @Success 200 {object} dto.ListResponse[dto.DocumentTypeResponse]
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Router /api/v1/automation/document-types [get]
+// @Security AutomationKey
 func (ctrl *AutomationController) listDocumentTypes(c *gin.Context) {
 	tenantID := c.Query("tenantId")
 	if tenantID == "" {
@@ -366,6 +461,18 @@ func (ctrl *AutomationController) listDocumentTypes(c *gin.Context) {
 }
 
 // assignDocumentType assigns a document type to a template.
+// @Summary Assign document type to template
+// @Tags Automation
+// @Accept json
+// @Produce json
+// @Param templateId path string true "Template ID"
+// @Param request body dto.AutomationAssignDocumentTypeRequest true "Document type assignment"
+// @Success 200 {object} dto.AssignDocumentTypeResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/automation/templates/{templateId}/document-type [post]
+// @Security AutomationKey
 func (ctrl *AutomationController) assignDocumentType(c *gin.Context) {
 	templateID := c.Param("templateId")
 
@@ -399,6 +506,18 @@ func (ctrl *AutomationController) assignDocumentType(c *gin.Context) {
 }
 
 // setProcessFields sets process fields on a template.
+// @Summary Set process fields on template
+// @Tags Automation
+// @Accept json
+// @Produce json
+// @Param templateId path string true "Template ID"
+// @Param request body dto.SetProcessFieldsRequest true "Process fields"
+// @Success 200 {object} dto.TemplateResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/automation/templates/{templateId}/process [put]
+// @Security AutomationKey
 func (ctrl *AutomationController) setProcessFields(c *gin.Context) {
 	templateID := c.Param("templateId")
 
@@ -433,6 +552,15 @@ func (ctrl *AutomationController) setProcessFields(c *gin.Context) {
 // --- Version Handlers ---
 
 // listVersions lists all versions for a template.
+// @Summary List template versions
+// @Tags Automation
+// @Produce json
+// @Param templateId path string true "Template ID"
+// @Success 200 {object} dto.ListTemplateVersionsResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/automation/templates/{templateId}/versions [get]
+// @Security AutomationKey
 func (ctrl *AutomationController) listVersions(c *gin.Context) {
 	templateID := c.Param("templateId")
 
@@ -446,6 +574,18 @@ func (ctrl *AutomationController) listVersions(c *gin.Context) {
 }
 
 // createVersion creates a new version for a template.
+// @Summary Create template version
+// @Tags Automation
+// @Accept json
+// @Produce json
+// @Param templateId path string true "Template ID"
+// @Param request body dto.AutomationCreateVersionRequest true "Version data"
+// @Success 201 {object} dto.TemplateVersionResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/automation/templates/{templateId}/versions [post]
+// @Security AutomationKey
 func (ctrl *AutomationController) createVersion(c *gin.Context) {
 	templateID := c.Param("templateId")
 
@@ -472,6 +612,16 @@ func (ctrl *AutomationController) createVersion(c *gin.Context) {
 }
 
 // getVersion retrieves a version with details.
+// @Summary Get template version
+// @Tags Automation
+// @Produce json
+// @Param templateId path string true "Template ID"
+// @Param versionId path string true "Version ID"
+// @Success 200 {object} dto.TemplateVersionDetailResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/automation/templates/{templateId}/versions/{versionId} [get]
+// @Security AutomationKey
 func (ctrl *AutomationController) getVersion(c *gin.Context) {
 	versionID := c.Param("versionId")
 
@@ -485,6 +635,19 @@ func (ctrl *AutomationController) getVersion(c *gin.Context) {
 }
 
 // updateVersion partially updates a version's name and/or description.
+// @Summary Update template version
+// @Tags Automation
+// @Accept json
+// @Produce json
+// @Param templateId path string true "Template ID"
+// @Param versionId path string true "Version ID"
+// @Param request body dto.AutomationUpdateVersionRequest true "Version data"
+// @Success 200 {object} dto.TemplateVersionResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/automation/templates/{templateId}/versions/{versionId} [patch]
+// @Security AutomationKey
 func (ctrl *AutomationController) updateVersion(c *gin.Context) {
 	versionID := c.Param("versionId")
 
@@ -510,6 +673,15 @@ func (ctrl *AutomationController) updateVersion(c *gin.Context) {
 }
 
 // publishVersion publishes a version.
+// @Summary Publish template version
+// @Tags Automation
+// @Param templateId path string true "Template ID"
+// @Param versionId path string true "Version ID"
+// @Success 204 "No Content"
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/automation/templates/{templateId}/versions/{versionId}/publish [post]
+// @Security AutomationKey
 func (ctrl *AutomationController) publishVersion(c *gin.Context) {
 	versionID := c.Param("versionId")
 
@@ -522,6 +694,15 @@ func (ctrl *AutomationController) publishVersion(c *gin.Context) {
 }
 
 // archiveVersion archives a published version.
+// @Summary Archive template version
+// @Tags Automation
+// @Param templateId path string true "Template ID"
+// @Param versionId path string true "Version ID"
+// @Success 204 "No Content"
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/automation/templates/{templateId}/versions/{versionId}/archive [post]
+// @Security AutomationKey
 func (ctrl *AutomationController) archiveVersion(c *gin.Context) {
 	versionID := c.Param("versionId")
 
@@ -534,6 +715,16 @@ func (ctrl *AutomationController) archiveVersion(c *gin.Context) {
 }
 
 // getVersionContent retrieves the full content (including contentStructure) for a version.
+// @Summary Get version content
+// @Tags Automation
+// @Produce json
+// @Param templateId path string true "Template ID"
+// @Param versionId path string true "Version ID"
+// @Success 200 {object} dto.TemplateVersionDetailResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/automation/templates/{templateId}/versions/{versionId}/content [get]
+// @Security AutomationKey
 func (ctrl *AutomationController) getVersionContent(c *gin.Context) {
 	versionID := c.Param("versionId")
 
@@ -565,6 +756,18 @@ func generateWorkspaceCode(name string) string {
 }
 
 // updateVersionContent replaces the content structure of a DRAFT version.
+// @Summary Update version content
+// @Tags Automation
+// @Accept json
+// @Param templateId path string true "Template ID"
+// @Param versionId path string true "Version ID"
+// @Param request body dto.AutomationUpdateVersionContentRequest true "Content structure"
+// @Success 200 "OK"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/automation/templates/{templateId}/versions/{versionId}/content [put]
+// @Security AutomationKey
 func (ctrl *AutomationController) updateVersionContent(c *gin.Context) {
 	versionID := c.Param("versionId")
 

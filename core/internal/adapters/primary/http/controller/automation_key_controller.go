@@ -36,6 +36,18 @@ func (ctrl *AutomationKeyController) RegisterRoutes(adminGroup *gin.RouterGroup)
 }
 
 // createKey creates a new API key.
+// @Summary Create automation API key
+// @Description Creates a new API key. The raw key is returned ONLY in this response.
+// @Tags Automation Keys
+// @Accept json
+// @Produce json
+// @Param request body dto.CreateAutomationKeyRequest true "API key data"
+// @Success 201 {object} dto.CreateAutomationKeyResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Router /admin/automation-keys/ [post]
+// @Security BearerAuth
 func (ctrl *AutomationKeyController) createKey(ctx *gin.Context) {
 	var req dto.CreateAutomationKeyRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -64,6 +76,14 @@ func (ctrl *AutomationKeyController) createKey(ctx *gin.Context) {
 }
 
 // listKeys lists all API keys.
+// @Summary List automation API keys
+// @Tags Automation Keys
+// @Produce json
+// @Success 200 {object} dto.ListResponse[dto.AutomationKeyResponse]
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Router /admin/automation-keys/ [get]
+// @Security BearerAuth
 func (ctrl *AutomationKeyController) listKeys(ctx *gin.Context) {
 	keys, err := ctrl.apiKeyUseCase.ListKeys(ctx.Request.Context())
 	if err != nil {
@@ -80,6 +100,16 @@ func (ctrl *AutomationKeyController) listKeys(ctx *gin.Context) {
 }
 
 // getKey retrieves a single API key by ID.
+// @Summary Get automation API key
+// @Tags Automation Keys
+// @Produce json
+// @Param id path string true "API Key ID"
+// @Success 200 {object} dto.AutomationKeyResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /admin/automation-keys/{id} [get]
+// @Security BearerAuth
 func (ctrl *AutomationKeyController) getKey(ctx *gin.Context) {
 	id := ctx.Param("id")
 
@@ -93,6 +123,19 @@ func (ctrl *AutomationKeyController) getKey(ctx *gin.Context) {
 }
 
 // updateKey updates the name and/or allowed tenants of a key.
+// @Summary Update automation API key
+// @Tags Automation Keys
+// @Accept json
+// @Produce json
+// @Param id path string true "API Key ID"
+// @Param request body dto.UpdateAutomationKeyRequest true "Key data"
+// @Success 200 {object} dto.AutomationKeyResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /admin/automation-keys/{id} [patch]
+// @Security BearerAuth
 func (ctrl *AutomationKeyController) updateKey(ctx *gin.Context) {
 	id := ctx.Param("id")
 
@@ -125,6 +168,15 @@ func (ctrl *AutomationKeyController) updateKey(ctx *gin.Context) {
 }
 
 // revokeKey revokes an API key.
+// @Summary Revoke automation API key
+// @Tags Automation Keys
+// @Param id path string true "API Key ID"
+// @Success 204 "No Content"
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /admin/automation-keys/{id} [delete]
+// @Security BearerAuth
 func (ctrl *AutomationKeyController) revokeKey(ctx *gin.Context) {
 	id := ctx.Param("id")
 
@@ -137,6 +189,18 @@ func (ctrl *AutomationKeyController) revokeKey(ctx *gin.Context) {
 }
 
 // getAuditLog returns paginated audit log entries for a specific API key.
+// @Summary Get audit log for API key
+// @Tags Automation Keys
+// @Produce json
+// @Param id path string true "API Key ID"
+// @Param limit query int false "Limit results" default(20)
+// @Param offset query int false "Offset results" default(0)
+// @Success 200 {object} dto.ListResponse[dto.AutomationAuditLogResponse]
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /admin/automation-keys/{id}/audit [get]
+// @Security BearerAuth
 func (ctrl *AutomationKeyController) getAuditLog(ctx *gin.Context) {
 	id := ctx.Param("id")
 

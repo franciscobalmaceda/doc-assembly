@@ -50,6 +50,11 @@ func init() {
 // @name            Authorization
 // @description     Type "Bearer" followed by a space and JWT token
 
+// @securityDefinitions.apikey AutomationKey
+// @in              header
+// @name            X-Automation-Key
+// @description     Automation API key for programmatic access
+
 // HTTPServer represents the HTTP server instance.
 type HTTPServer struct {
 	engine *gin.Engine
