@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import {
   Dialog,
   DialogContent,
@@ -320,10 +320,12 @@ function FieldEditor({
             setIsPopoverOpen(open)
             if (open) {
               setAsActiveTarget()
+            } else {
+              clearTargetIfOwned()
             }
           }}
         >
-          <PopoverTrigger asChild>
+          <PopoverAnchor asChild>
             <div
               ref={targetRef}
               role="button"
@@ -380,8 +382,12 @@ function FieldEditor({
                 </div>
               )}
             </div>
-          </PopoverTrigger>
-          <PopoverContent align="start" side="bottom" className="w-[360px] p-3">
+          </PopoverAnchor>
+          <PopoverContent
+            align="start"
+            side="bottom"
+            className="w-[330px] max-w-[calc(100vw-2rem)] p-3"
+          >
             {textVariables.length === 0 ? (
               <div className="px-1 py-2 text-xs text-muted-foreground">
                 {t('editor.roles.card.noVariables')}
@@ -428,6 +434,7 @@ export function SignerRoleItem({
   // Obtener workflowConfig del store
   const workflowConfig = useSignerRolesStore((state) => state.workflowConfig)
   const updateRoleTriggers = useSignerRolesStore((state) => state.updateRoleTriggers)
+  const activeInjectionTarget = useSignerRolesStore((state) => state.activeInjectionTarget)
 
   // Verificar si estamos en modo individual
   const isIndividualMode = workflowConfig.notifications.scope === 'individual'
@@ -480,13 +487,16 @@ export function SignerRoleItem({
   const handleBlur = useCallback(
     (e: React.FocusEvent) => {
       if (isCompactMode && cardRef.current) {
+        if (activeInjectionTarget?.roleId === role.id) {
+          return
+        }
         // Verificar si el nuevo focus está dentro de la card
         if (!cardRef.current.contains(e.relatedTarget as Node)) {
           blurTimeoutRef.current = setTimeout(() => setIsExpanded(false), 150)
         }
       }
     },
-    [isCompactMode]
+    [activeInjectionTarget, isCompactMode, role.id]
   )
 
   // Cancelar colapso si el focus vuelve a la card
