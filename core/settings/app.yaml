@@ -4,6 +4,21 @@
 
 environment: development
 
+# Maps environment names to canonical dev/prod. Add custom aliases as needed.
+environment_aliases:
+  dev:
+    - dev
+    - develop
+    - development
+    - staging
+    - uat
+    - qa
+    - local
+    - sandbox
+  prod:
+    - prod
+    - production
+
 server:
   port: "8080"
   public_url: ""      # DOC_ENGINE_SERVER_PUBLIC_URL - Public-facing URL for signing links (e.g. https://app.example.com)

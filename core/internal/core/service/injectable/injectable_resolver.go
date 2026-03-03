@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -19,6 +20,8 @@ const (
 
 // ResolveResult contains the results of injector resolution.
 type ResolveResult struct {
+	mu sync.Mutex
+
 	// Values contains the resolved values (code -> value).
 	Values map[string]entity.InjectableValue
 
@@ -272,18 +275,22 @@ func (s *InjectableResolverService) executeInjector(
 		}
 
 		// Non-critical error, save and continue
+		result.mu.Lock()
 		result.Errors[code] = err
+		result.mu.Unlock()
 		return nil
 	}
 
 	// Save result
 	if injResult != nil {
+		result.mu.Lock()
 		result.Values[code] = injResult.Value
-		injCtx.SetResolved(code, injResult.Value.AsAny())
-
 		if injResult.Metadata != nil {
 			result.Metadata[code] = injResult.Metadata
 		}
+		result.mu.Unlock()
+
+		injCtx.SetResolved(code, injResult.Value.AsAny())
 	}
 
 	slog.DebugContext(ctx, "injector completed", "code", code)

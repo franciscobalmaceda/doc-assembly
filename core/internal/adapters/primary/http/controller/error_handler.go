@@ -143,9 +143,22 @@ func HandleError(ctx *gin.Context, err error) {
 		return
 	}
 
+	// Check for RecipientValidationError (special handling)
+	var recipientErr *entity.RecipientValidationError
+	if errors.As(err, &recipientErr) {
+		ctx.JSON(http.StatusUnprocessableEntity, dto.NewRecipientValidationErrorResponse(recipientErr))
+		return
+	}
+
 	statusCode := mapErrorToStatusCode(err)
-	if statusCode == http.StatusInternalServerError {
+	switch {
+	case statusCode == http.StatusInternalServerError:
 		slog.ErrorContext(ctx.Request.Context(), "unhandled error", slog.Any("error", err))
+	case statusCode == http.StatusNotFound:
+		slog.WarnContext(ctx.Request.Context(), "not found",
+			slog.String("error", err.Error()),
+			slog.String("path", ctx.Request.URL.Path),
+		)
 	}
 	respondError(ctx, statusCode, err)
 }

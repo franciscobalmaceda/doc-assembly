@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/rendis/doc-assembly/core/internal/core/entity"
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 	"github.com/rendis/doc-assembly/core/internal/core/service/rendering/pdfrenderer"
 	"github.com/rendis/doc-assembly/core/internal/infra/config"
@@ -239,6 +240,9 @@ func (e *Engine) Run() error {
 	if err := e.loadConfig(); err != nil {
 		return fmt.Errorf("config: %w", err)
 	}
+
+	// Initialize environment aliases from config
+	entity.InitEnvironmentAliases(e.config.EnvironmentAliases)
 
 	// Preflight checks
 	if err := e.preflightChecks(ctx); err != nil {

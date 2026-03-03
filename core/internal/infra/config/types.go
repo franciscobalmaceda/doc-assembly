@@ -7,7 +7,8 @@ import (
 
 // Config represents the complete application configuration.
 type Config struct {
-	Environment  string             `mapstructure:"environment"`
+	Environment        string              `mapstructure:"environment"`
+	EnvironmentAliases map[string][]string `mapstructure:"environment_aliases"`
 	Server       ServerConfig       `mapstructure:"server"`
 	Database     DatabaseConfig     `mapstructure:"database"`
 	Auth         AuthConfig         `mapstructure:"auth"`

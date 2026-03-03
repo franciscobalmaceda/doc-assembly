@@ -81,13 +81,19 @@ func (a *TemplateVersionSearchAdapter) SearchTemplateVersions(ctx context.Contex
 			return nil, fmt.Errorf("finding workspace by code: %w", err)
 		}
 
-		process := params.Process
+		process := strings.ToUpper(strings.TrimSpace(params.Process))
 		if process == "" {
 			process = entity.DefaultProcess
 		}
 		tmpl, err := a.templateRepo.FindByDocumentType(ctx, workspace.ID, docType.ID, process)
 		if err != nil {
 			return nil, fmt.Errorf("finding template by document type: %w", err)
+		}
+		if tmpl == nil && !strings.EqualFold(process, entity.DefaultProcess) {
+			tmpl, err = a.templateRepo.FindByDocumentType(ctx, workspace.ID, docType.ID, entity.DefaultProcess)
+			if err != nil {
+				return nil, fmt.Errorf("finding template by document type (default fallback): %w", err)
+			}
 		}
 		if tmpl == nil {
 			continue

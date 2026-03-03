@@ -343,7 +343,7 @@ const (
 )
 
 // DefaultProcess is the base system process.
-const DefaultProcess = "default"
+const DefaultProcess = "DEFAULT"
 
 // DefaultProcessType is the default process type for the base process.
 const DefaultProcessType = ProcessTypeCanonicalName

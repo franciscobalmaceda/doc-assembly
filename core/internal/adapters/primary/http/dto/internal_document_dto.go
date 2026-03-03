@@ -62,3 +62,19 @@ func NewMissingInjectablesErrorResponse(err *entity.MissingInjectablesError) Mis
 		MissingCodes: err.MissingCodes,
 	}
 }
+
+// RecipientValidationErrorResponse is the response for recipient validation errors.
+type RecipientValidationErrorResponse struct {
+	Error  string   `json:"error"`
+	Code   string   `json:"code"`
+	Errors []string `json:"errors"`
+}
+
+// NewRecipientValidationErrorResponse creates a response for recipient validation error.
+func NewRecipientValidationErrorResponse(err *entity.RecipientValidationError) RecipientValidationErrorResponse {
+	return RecipientValidationErrorResponse{
+		Error:  "recipient validation failed",
+		Code:   "RECIPIENT_VALIDATION_FAILED",
+		Errors: err.Errors,
+	}
+}

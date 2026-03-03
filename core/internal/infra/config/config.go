@@ -75,6 +75,7 @@ func Load() (*Config, error) {
 	applySigningEnvOverrides(&cfg.Signing)
 	applyAuthPanelEnvOverrides(cfg.Auth.Panel)
 	applyBootstrapEnvOverrides(&cfg.Bootstrap)
+	applyInternalAPIEnvOverrides(&cfg.InternalAPI)
 
 	// Run OIDC discovery to populate issuer/jwks_url from discovery endpoints.
 	// Non-fatal: dev mode (no OIDC) and manual config still work.
@@ -112,8 +113,17 @@ func setDefaults(v *viper.Viper) {
 	// Bootstrap defaults
 	v.SetDefault("bootstrap.enabled", true)
 
+	// Internal API defaults
+	v.SetDefault("internal_api.enabled", true)
+
 	// Environment default
 	v.SetDefault("environment", "development")
+
+	// Environment aliases — map environment names to canonical dev/prod
+	v.SetDefault("environment_aliases", map[string][]string{
+		"dev":  {"dev", "develop", "development", "staging", "uat", "qa", "local", "sandbox"},
+		"prod": {"prod", "production"},
+	})
 }
 
 // applySigningEnvOverrides reads DOC_ENGINE_SIGNING_* env vars into SigningConfig.
@@ -167,6 +177,13 @@ func applyBootstrapEnvOverrides(cfg *BootstrapConfig) {
 	}
 }
 
+// applyInternalAPIEnvOverrides reads DOC_ENGINE_INTERNAL_API_* env vars into InternalAPIConfig.
+func applyInternalAPIEnvOverrides(cfg *InternalAPIConfig) {
+	if v := os.Getenv("DOC_ENGINE_INTERNAL_API_API_KEY"); v != "" {
+		cfg.APIKey = v
+	}
+}
+
 // LoadFromFile reads configuration from a specific YAML file path.
 // Environment variables still apply as overrides.
 func LoadFromFile(filePath string) (*Config, error) {
@@ -211,6 +228,7 @@ func LoadFromFile(filePath string) (*Config, error) {
 	applySigningEnvOverrides(&cfg.Signing)
 	applyAuthPanelEnvOverrides(cfg.Auth.Panel)
 	applyBootstrapEnvOverrides(&cfg.Bootstrap)
+	applyInternalAPIEnvOverrides(&cfg.InternalAPI)
 
 	if err := cfg.Auth.DiscoverAll(context.Background()); err != nil {
 		slog.WarnContext(context.Background(), "OIDC discovery failed (non-fatal)",

@@ -148,18 +148,26 @@ func (s *InternalDocumentService) resolveTemplateContext(
 	if err != nil {
 		return nil, fmt.Errorf("resolving tenant by code: %w", err)
 	}
+	slog.InfoContext(ctx, "resolved tenant", slog.String("tenantID", tenant.ID), slog.String("tenantCode", tenantCode))
 
 	workspace, err := s.workspaceRepo.FindByCode(ctx, tenant.ID, workspaceCode)
 	if err != nil {
-		return nil, fmt.Errorf("resolving workspace by code: %w", err)
+		if !errors.Is(err, entity.ErrWorkspaceNotFound) || s.customResolver == nil {
+			return nil, fmt.Errorf("resolving workspace by code: %w", err)
+		}
+		slog.InfoContext(ctx, "workspace not found, deferring to template resolver",
+			slog.String("workspaceCode", workspaceCode))
+	} else {
+		slog.InfoContext(ctx, "resolved workspace", slog.String("workspaceID", workspace.ID), slog.String("workspaceCode", workspaceCode))
 	}
 
 	docType, err := s.docTypeRepo.FindByCodeWithGlobalFallback(ctx, tenant.ID, documentTypeCode)
 	if err != nil {
 		return nil, fmt.Errorf("resolving document type by code: %w", err)
 	}
+	slog.InfoContext(ctx, "resolved document type", slog.String("docTypeID", docType.ID), slog.String("docTypeCode", documentTypeCode))
 
-	process := cmd.Process
+	process := strings.ToUpper(strings.TrimSpace(cmd.Process))
 	if process == "" {
 		process = entity.DefaultProcess
 	}
@@ -183,8 +191,10 @@ func (s *InternalDocumentService) resolveTemplateContext(
 		Environment:     cmd.Environment,
 	}
 
-	if err := s.applySandboxWorkspaceCode(ctx, resolverReq, workspace.ID, cmd.Environment); err != nil {
-		return nil, err
+	if workspace != nil {
+		if err := s.applySandboxWorkspaceCode(ctx, resolverReq, workspace.ID, cmd.Environment); err != nil {
+			return nil, err
+		}
 	}
 
 	versionID, err := s.resolveTemplateVersionID(ctx, resolverReq)
@@ -206,6 +216,13 @@ func (s *InternalDocumentService) resolveTemplateContext(
 	}
 	if template.DocumentTypeID == nil || *template.DocumentTypeID != docType.ID {
 		return nil, entity.ErrInternalTemplateResolutionNotFound
+	}
+
+	if workspace == nil {
+		workspace, err = s.workspaceRepo.FindByID(ctx, template.WorkspaceID)
+		if err != nil {
+			return nil, fmt.Errorf("resolving workspace from resolved template: %w", err)
+		}
 	}
 
 	return &internalResolvedContext{
@@ -247,7 +264,13 @@ func (s *InternalDocumentService) resolveTemplateVersionID(
 	if s.customResolver != nil {
 		vID, err := s.customResolver.Resolve(ctx, req, s.searchAdapter)
 		if err != nil {
+			slog.ErrorContext(ctx, "custom template resolver error", slog.Any("error", err))
 			return nil, fmt.Errorf("custom template resolver failed: %w", err)
+		}
+		if vID != nil {
+			slog.InfoContext(ctx, "custom resolver hit", slog.String("versionID", *vID))
+		} else {
+			slog.InfoContext(ctx, "custom resolver miss, falling back to default")
 		}
 		versionID = vID
 	}
@@ -255,7 +278,13 @@ func (s *InternalDocumentService) resolveTemplateVersionID(
 	if versionID == nil {
 		vID, err := s.defaultResolver.Resolve(ctx, req, s.searchAdapter)
 		if err != nil {
+			slog.ErrorContext(ctx, "default template resolver error", slog.Any("error", err))
 			return nil, err
+		}
+		if vID != nil {
+			slog.InfoContext(ctx, "default resolver hit", slog.String("versionID", *vID))
+		} else {
+			slog.WarnContext(ctx, "default resolver miss, no template version found")
 		}
 		versionID = vID
 	}
