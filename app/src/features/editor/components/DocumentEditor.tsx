@@ -45,10 +45,14 @@ import { TableCornerHandle } from './TableCornerHandle'
 import { hasConfigurableOptions } from '../types/injectable'
 import { type Variable } from '../types'
 import { usePaginationStore, useSignerRolesStore } from '../stores'
+import { useVariablesPanelStore } from '../stores/variables-panel-store'
 import type { VariableDragData } from '../types/drag'
 import { getInjectableVariableIds } from '../types/signer-roles'
 import type { Editor } from '@tiptap/core'
-import { getDocumentEditorGridClass } from '../layout/document-editor-grid'
+import {
+  getDocumentEditorGridClass,
+  getDocumentEditorGridTemplateColumns,
+} from '../layout/document-editor-grid'
 
 interface DocumentEditorProps {
   initialContent?: string
@@ -82,6 +86,8 @@ export function DocumentEditor({
 }: DocumentEditorProps) {
   // Get page config from store (for visual width and margins)
   const { pageSize, margins } = usePaginationStore()
+  const isVariablesPanelCollapsed = useVariablesPanelStore((state) => state.isCollapsed)
+  const isRolesPanelCollapsed = useSignerRolesStore((state) => state.isCollapsed)
   const roles = useSignerRolesStore((state) => state.roles)
   const updateRole = useSignerRolesStore((state) => state.updateRole)
   const activeInjectionTarget = useSignerRolesStore((state) => state.activeInjectionTarget)
@@ -127,6 +133,16 @@ export function DocumentEditor({
         distance: 8,
       },
     })
+  )
+
+  const gridTemplateColumns = useMemo(
+    () =>
+      getDocumentEditorGridTemplateColumns({
+        editable,
+        variablesCollapsed: isVariablesPanelCollapsed,
+        rolesCollapsed: isRolesPanelCollapsed,
+      }),
+    [editable, isVariablesPanelCollapsed, isRolesPanelCollapsed]
   )
 
   // eslint-disable-next-line react-hooks/refs -- Reading ref during render is intentional to preserve content on editor recreation
@@ -576,13 +592,16 @@ export function DocumentEditor({
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
       >
-        <div className={getDocumentEditorGridClass(editable)}>
+        <div
+          className={getDocumentEditorGridClass(editable)}
+          style={{ gridTemplateColumns }}
+        >
           {/* Left: Variables Panel - only show when editable */}
           {editable && (
             <VariablesPanel
               onVariableClick={handleVariableClick}
               draggingIds={activeDragData ? [activeDragData.id] : []}
-              className="row-span-2 grid grid-rows-subgrid"
+              className="row-span-2 min-w-0"
             />
           )}
 
@@ -640,7 +659,7 @@ export function DocumentEditor({
           <SignerRolesPanel
             variables={variables}
             editable={editable}
-            className="row-span-2 grid grid-rows-subgrid"
+            className="row-span-2 min-w-0"
           />
         </div>
 

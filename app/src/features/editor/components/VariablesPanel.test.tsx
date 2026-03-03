@@ -4,10 +4,6 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { VariablesPanel } from './VariablesPanel'
 import { useVariablesPanelStore } from '../stores/variables-panel-store'
 import { useInjectablesStore } from '../stores/injectables-store'
-import {
-  PANEL_COLLAPSED_WIDTH,
-  VARIABLES_EXPANDED_WIDTH,
-} from '../layout/panel-widths'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -141,7 +137,7 @@ describe('VariablesPanel collapsed header', () => {
     expect(internalSectionLabel.className).toContain('truncate')
   })
 
-  it('uses fluid clamp width when expanded', () => {
+  it('delegates width control to parent grid and keeps structural container classes', () => {
     useVariablesPanelStore.getState().setCollapsed(false)
     useInjectablesStore.getState().setVariables([])
 
@@ -153,25 +149,11 @@ describe('VariablesPanel collapsed header', () => {
 
     const panel = container.querySelector('aside')
     expect(panel).toBeDefined()
-    expect(panel?.getAttribute('data-expanded-width')).toBe(
-      VARIABLES_EXPANDED_WIDTH
-    )
-  })
-
-  it('uses 56px width when collapsed', () => {
-    useVariablesPanelStore.getState().setCollapsed(true)
-    useInjectablesStore.getState().setVariables([])
-
-    const { container } = render(
-      <TooltipProvider>
-        <VariablesPanel />
-      </TooltipProvider>
-    )
-
-    const panel = container.querySelector('aside')
-    expect(panel).toBeDefined()
-    expect(panel?.getAttribute('data-collapsed-width')).toBe(
-      String(PANEL_COLLAPSED_WIDTH)
-    )
+    expect(panel?.className).toContain('h-full')
+    expect(panel?.className).toContain('w-full')
+    expect(panel?.className).toContain('min-w-0')
+    expect(panel?.className).not.toContain('transition-[width]')
+    expect(panel?.getAttribute('data-expanded-width')).toBeNull()
+    expect(panel?.getAttribute('data-collapsed-width')).toBeNull()
   })
 })

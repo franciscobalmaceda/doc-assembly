@@ -11,10 +11,6 @@ import { useVariablesPanelStore } from '../stores/variables-panel-store'
 import type { VariableDragData } from '../types/drag'
 import type { RoleInjectable } from '../types/role-injectable'
 import type { Variable } from '../types/variables'
-import {
-  PANEL_COLLAPSED_WIDTH,
-  VARIABLES_EXPANDED_WIDTH,
-} from '../layout/panel-widths'
 import { DraggableVariable } from './DraggableVariable'
 import { VariableGroup } from './VariableGroup'
 import { VariablesModal } from './VariablesModal'
@@ -41,7 +37,7 @@ interface VariablesPanelProps {
  * for drag-and-drop or click-to-insert into the editor
  *
  * Features:
- * - Collapsible with smooth animation (clamp(220px, 26%, 320px) ↔ 56px)
+ * - Collapsible with smooth animation (panel width controlled by parent grid)
  * - Global search for variables
  * - Grouped by: Global variables and Role injectables
  * - Visual differentiation for role variables (purple theme)
@@ -279,15 +275,8 @@ export function VariablesPanel({
     <>
     <motion.aside
       initial={false}
-      data-collapsed-width={PANEL_COLLAPSED_WIDTH}
-      data-expanded-width={VARIABLES_EXPANDED_WIDTH}
-      style={{
-        width: isCollapsed
-          ? `${PANEL_COLLAPSED_WIDTH}px`
-          : VARIABLES_EXPANDED_WIDTH,
-      }}
       className={cn(
-        'border-r border-border bg-card shrink-0 overflow-hidden grid-cols-1 transition-[width] duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]',
+        'flex h-full w-full min-w-0 flex-col border-r border-border bg-card shrink-0 overflow-hidden',
         className
       )}
     >

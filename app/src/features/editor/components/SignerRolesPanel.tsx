@@ -38,10 +38,6 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { useSignerRolesStore } from '../stores/signer-roles-store'
-import {
-  PANEL_COLLAPSED_WIDTH,
-  ROLES_EXPANDED_WIDTH,
-} from '../layout/panel-widths'
 import { SignerRoleItem } from './SignerRoleItem'
 import { WorkflowConfigButton } from './workflow'
 import type { Variable } from '../types/variables'
@@ -171,15 +167,8 @@ export function SignerRolesPanel({
   return (
     <motion.aside
       initial={false}
-      data-collapsed-width={PANEL_COLLAPSED_WIDTH}
-      data-expanded-width={ROLES_EXPANDED_WIDTH}
-      style={{
-        width: isCollapsed
-          ? `${PANEL_COLLAPSED_WIDTH}px`
-          : ROLES_EXPANDED_WIDTH,
-      }}
       className={cn(
-        'flex flex-col border-l border-border bg-card shrink-0 overflow-hidden transition-[width] duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]',
+        'flex h-full w-full min-w-0 flex-col border-l border-border bg-card shrink-0 overflow-hidden',
         className
       )}
     >
