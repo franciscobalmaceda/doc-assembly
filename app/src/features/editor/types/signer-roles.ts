@@ -73,6 +73,7 @@ export interface SignerRolesActions {
   ) => void
   deleteRole: (id: string) => void
   reorderRoles: (startIndex: number, endIndex: number) => void
+  setCollapsed: (collapsed: boolean) => void
   toggleCollapsed: () => void
   toggleCompactMode: () => void
   setActiveInjectionTarget: (target: SignerRoleInjectionTarget | null) => void

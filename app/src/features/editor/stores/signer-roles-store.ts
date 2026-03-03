@@ -81,6 +81,10 @@ export const useSignerRolesStore = create<SignerRolesStore>()((set, get) => ({
     })
   },
 
+  setCollapsed: (collapsed) => {
+    set({ isCollapsed: collapsed })
+  },
+
   toggleCollapsed: () => {
     set((state) => ({ isCollapsed: !state.isCollapsed }))
   },
