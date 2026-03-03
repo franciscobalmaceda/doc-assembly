@@ -23,12 +23,19 @@ func NewPublicDocumentAccessController(accessUC documentuc.DocumentAccessUseCase
 
 // RegisterRoutes registers public document access routes.
 // These routes are NOT behind the auth middleware chain.
-func (c *PublicDocumentAccessController) RegisterRoutes(router gin.IRouter, getMiddlewares ...gin.HandlerFunc) {
+// authMiddlewares (e.g. CustomPublicDocumentAccess) are applied to both GET and POST.
+func (c *PublicDocumentAccessController) RegisterRoutes(router gin.IRouter, authMiddlewares ...gin.HandlerFunc) {
 	public := router.Group("/public/doc")
 	{
-		getMiddlewares = append(getMiddlewares, c.GetPublicDocumentInfo)
-		public.GET("/:documentId", getMiddlewares...)
-		public.POST("/:documentId/request-access", c.RequestAccess)
+		getHandlers := make([]gin.HandlerFunc, 0, len(authMiddlewares)+1)
+		getHandlers = append(getHandlers, authMiddlewares...)
+		getHandlers = append(getHandlers, c.GetPublicDocumentInfo)
+		public.GET("/:documentId", getHandlers...)
+
+		postHandlers := make([]gin.HandlerFunc, 0, len(authMiddlewares)+1)
+		postHandlers = append(postHandlers, authMiddlewares...)
+		postHandlers = append(postHandlers, c.RequestAccess)
+		public.POST("/:documentId/request-access", postHandlers...)
 	}
 }
 
@@ -69,19 +76,31 @@ func (c *PublicDocumentAccessController) GetPublicDocumentInfo(ctx *gin.Context)
 }
 
 // RequestAccess validates email and sends an access link.
+// If custom auth claims are present (via CustomPublicDocumentAccess middleware),
+// returns a signing URL directly without sending email.
 // Always returns 200 to prevent email enumeration.
 // @Summary Request document access
-// @Description Validates email against document recipients and sends an access link via email. Always returns 200.
+// @Description Validates email against document recipients and sends an access link via email. With valid auth, returns signing URL directly. Always returns 200.
 // @Tags Public Document Access
 // @Accept json
 // @Produce json
 // @Param documentId path string true "Document ID"
-// @Param request body requestAccessBody true "Email address"
+// @Param request body requestAccessBody false "Email address (not required when auth is provided)"
 // @Success 200 {object} map[string]string
 // @Router /public/doc/{documentId}/request-access [post]
 func (c *PublicDocumentAccessController) RequestAccess(ctx *gin.Context) {
 	documentID := ctx.Param("documentId")
 
+	// If custom auth claims are present, return signing URL directly.
+	if claims, ok := middleware.GetPublicDocumentAccessClaims(ctx); ok {
+		signingURL, err := c.accessUC.RequestDirectAccess(ctx.Request.Context(), documentID, claims.Email)
+		if err == nil && signingURL != "" {
+			ctx.JSON(http.StatusOK, gin.H{"signingUrl": signingURL})
+			return
+		}
+	}
+
+	// Fallback: standard email gate flow.
 	var req requestAccessBody
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "a valid email address is required"})

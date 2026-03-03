@@ -94,3 +94,29 @@ func TestCustomPublicDocumentAccess_FallsBackWhenClaimsEmpty(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.JSONEq(t, `{"hasClaims":false}`, w.Body.String())
 }
+
+func TestCustomPublicDocumentAccess_SetsClaimsOnPOST(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.POST("/public/doc/:documentId/request-access",
+		CustomPublicDocumentAccess(&fakePublicDocAuth{
+			claims: &port.PublicDocumentAccessClaims{Email: "bob@example.com"},
+		}),
+		func(c *gin.Context) {
+			claims, ok := GetPublicDocumentAccessClaims(c)
+			if !ok {
+				c.JSON(http.StatusOK, gin.H{"email": ""})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"email": claims.Email})
+		},
+	)
+
+	req := httptest.NewRequest(http.MethodPost, "/public/doc/doc-1/request-access", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.JSONEq(t, `{"email":"bob@example.com"}`, w.Body.String())
+}

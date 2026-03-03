@@ -13,19 +13,15 @@ import (
 const publicDocAccessClaimsKey = "public_doc_access_claims"
 
 // CustomPublicDocumentAccess runs a custom authenticator for
-// GET /public/doc/:documentId requests.
+// public /public/doc/:documentId requests (GET and POST).
 //
 // This middleware never blocks the request. On auth success, claims are stored
-// in context so the controller can redirect directly to /public/sign/:token.
+// in context so the controller can redirect directly to /public/sign/:token
+// or return a signing URL in the response.
 // On auth failure/miss, flow falls back to the standard email gate.
 func CustomPublicDocumentAccess(auth port.PublicDocumentAccessAuthenticator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.Method == http.MethodOptions {
-			c.Next()
-			return
-		}
-
-		if c.Request.Method != http.MethodGet {
 			c.Next()
 			return
 		}
