@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CENTER_MIN_VIEWPORT,
   decideAdaptivePanels,
-  EDITOR_SURFACE_PADDING_X,
   LAYOUT_BUFFER,
   ROLES_EXPANDED,
   VARIABLES_COLLAPSED,
@@ -12,11 +12,10 @@ const pageSizeWidth = 794
 const marginsLeft = 96
 const marginsRight = 96
 
-const centerMin =
-  pageSizeWidth + marginsLeft + marginsRight + EDITOR_SURFACE_PADDING_X
+const centerMin = CENTER_MIN_VIEWPORT
 const minBothExpanded =
   centerMin + VARIABLES_EXPANDED + ROLES_EXPANDED + LAYOUT_BUFFER
-const minRolesPriority =
+const minRolesExpanded =
   centerMin + VARIABLES_COLLAPSED + ROLES_EXPANDED + LAYOUT_BUFFER
 
 describe('decideAdaptivePanels', () => {
@@ -58,7 +57,7 @@ describe('decideAdaptivePanels', () => {
 
   it('collapses both when width is critical', () => {
     const result = decideAdaptivePanels({
-      availableWidth: minRolesPriority - 1,
+      availableWidth: minRolesExpanded - 1,
       pageSizeWidth,
       marginsLeft,
       marginsRight,
@@ -94,8 +93,7 @@ describe('decideAdaptivePanels', () => {
   })
 
   it('ignores variables panel in read-only mode and collapses roles if needed', () => {
-    const minReadOnly =
-      centerMin + ROLES_EXPANDED + LAYOUT_BUFFER
+    const minReadOnly = centerMin + ROLES_EXPANDED + LAYOUT_BUFFER
 
     const result = decideAdaptivePanels({
       availableWidth: minReadOnly - 1,

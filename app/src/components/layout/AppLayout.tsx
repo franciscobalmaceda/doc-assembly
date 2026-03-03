@@ -71,8 +71,8 @@ export function AppLayout() {
       </motion.div>
 
       {/* Contenido principal */}
-      <main className="flex flex-1 flex-col overflow-hidden pt-16">
-        <div className="flex-1 overflow-auto">
+      <main className="flex flex-1 min-w-0 flex-col overflow-hidden pt-16">
+        <div className="flex-1 min-w-0 overflow-auto">
           <Outlet />
         </div>
       </main>

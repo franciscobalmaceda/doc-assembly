@@ -43,7 +43,6 @@ import { InconsistencyNavigator } from './InconsistencyNavigator'
 import { TableBubbleMenu } from './TableBubbleMenu'
 import { TableCornerHandle } from './TableCornerHandle'
 import { hasConfigurableOptions } from '../types/injectable'
-import { cn } from '@/lib/utils'
 import { type Variable } from '../types'
 import { usePaginationStore, useSignerRolesStore } from '../stores'
 import { useVariablesPanelStore } from '../stores/variables-panel-store'
@@ -51,6 +50,7 @@ import type { VariableDragData } from '../types/drag'
 import { getInjectableVariableIds } from '../types/signer-roles'
 import type { Editor } from '@tiptap/core'
 import { decideAdaptivePanels } from '../layout/adaptive-panels'
+import { getDocumentEditorGridClass } from '../layout/document-editor-grid'
 
 interface DocumentEditorProps {
   initialContent?: string
@@ -144,7 +144,7 @@ export function DocumentEditor({
     if (!element) return
 
     const updateWidth = () => {
-      setAvailableWidth(element.clientWidth)
+      setAvailableWidth(element.getBoundingClientRect().width)
     }
 
     updateWidth()
@@ -643,10 +643,7 @@ export function DocumentEditor({
       >
         <div
           ref={layoutContainerRef}
-          className={cn(
-            'grid grid-rows-[auto_1fr] h-full',
-            editable ? 'grid-cols-[auto_1fr_auto]' : 'grid-cols-[1fr_auto]'
-          )}
+          className={getDocumentEditorGridClass(editable)}
         >
           {/* Left: Variables Panel - only show when editable */}
           {editable && (

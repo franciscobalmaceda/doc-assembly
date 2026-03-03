@@ -2,7 +2,7 @@ export const VARIABLES_EXPANDED = 320
 export const VARIABLES_COLLAPSED = 56
 export const ROLES_EXPANDED = 360
 export const ROLES_COLLAPSED = 56
-export const EDITOR_SURFACE_PADDING_X = 64
+export const CENTER_MIN_VIEWPORT = 320
 export const LAYOUT_BUFFER = 24
 
 export type AdaptivePanelsPriority = 'roles' | 'variables'
@@ -31,27 +31,28 @@ export interface AdaptivePanelsDecision {
 
 export function decideAdaptivePanels({
   availableWidth,
-  pageSizeWidth,
-  marginsLeft,
-  marginsRight,
+  pageSizeWidth: _pageSizeWidth,
+  marginsLeft: _marginsLeft,
+  marginsRight: _marginsRight,
   editable,
   variablesCollapsed,
   rolesCollapsed,
   priority = 'roles',
   noAutoExpand = true,
 }: AdaptivePanelsInput): AdaptivePanelsDecision {
-  const centerMin =
-    pageSizeWidth + marginsLeft + marginsRight + EDITOR_SURFACE_PADDING_X
+  const centerMin = CENTER_MIN_VIEWPORT
 
   const expandedVariableWidth = editable ? VARIABLES_EXPANDED : 0
   const collapsedVariableWidth = editable ? VARIABLES_COLLAPSED : 0
 
   const minBothExpanded =
     centerMin + expandedVariableWidth + ROLES_EXPANDED + LAYOUT_BUFFER
-  const minRolesPriority =
+  const minRolesExpanded =
     centerMin + collapsedVariableWidth + ROLES_EXPANDED + LAYOUT_BUFFER
+  const minBothCollapsed =
+    centerMin + collapsedVariableWidth + ROLES_COLLAPSED + LAYOUT_BUFFER
 
-  if (availableWidth < minRolesPriority) {
+  if (availableWidth < minBothCollapsed || availableWidth < minRolesExpanded) {
     return {
       nextVariablesCollapsed: editable ? true : variablesCollapsed,
       nextRolesCollapsed: true,
