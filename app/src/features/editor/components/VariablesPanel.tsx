@@ -37,7 +37,7 @@ interface VariablesPanelProps {
  * for drag-and-drop or click-to-insert into the editor
  *
  * Features:
- * - Collapsible with smooth animation (288px ↔ 56px)
+ * - Collapsible with smooth animation (320px ↔ 56px)
  * - Global search for variables
  * - Grouped by: Global variables and Role injectables
  * - Visual differentiation for role variables (purple theme)
@@ -275,7 +275,7 @@ export function VariablesPanel({
     <>
     <motion.aside
       initial={false}
-      animate={{ width: isCollapsed ? 56 : 288 }}
+      animate={{ width: isCollapsed ? 56 : 320 }}
       transition={COLLAPSE_TRANSITION}
       className={cn(
         'border-r border-border bg-card shrink-0 overflow-hidden grid-cols-1',

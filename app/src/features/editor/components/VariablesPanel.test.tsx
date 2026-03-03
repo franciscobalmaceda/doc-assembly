@@ -136,4 +136,19 @@ describe('VariablesPanel collapsed header', () => {
     expect(internalSectionLabel.className).toContain('flex-1')
     expect(internalSectionLabel.className).toContain('truncate')
   })
+
+  it('uses 320px width when expanded', () => {
+    useVariablesPanelStore.getState().setCollapsed(false)
+    useInjectablesStore.getState().setVariables([])
+
+    const { container } = render(
+      <TooltipProvider>
+        <VariablesPanel />
+      </TooltipProvider>
+    )
+
+    const panel = container.querySelector('aside')
+    expect(panel).toBeDefined()
+    expect(panel?.getAttribute('style')).toContain('width: 320px')
+  })
 })

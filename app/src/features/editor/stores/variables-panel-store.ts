@@ -3,7 +3,7 @@ import { create } from 'zustand'
 export interface VariablesPanelStore {
   /**
    * Estado de colapso del panel de variables
-   * - false: panel expandido (288px)
+   * - false: panel expandido (320px)
    * - true: panel colapsado (56px)
    */
   isCollapsed: boolean

@@ -229,7 +229,7 @@ export const LogicBuilder = ({ initialData, onChange }: LogicBuilderProps) => {
       >
         <div className="flex flex-row h-full bg-background overflow-hidden">
           {/* Variables Sidebar */}
-          <LogicBuilderVariablesPanel className="w-72" />
+          <LogicBuilderVariablesPanel className="w-80" />
 
           {/* Builder Area */}
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
