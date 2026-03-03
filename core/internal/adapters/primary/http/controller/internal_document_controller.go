@@ -10,6 +10,7 @@ import (
 	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
 	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
 	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/rendis/doc-assembly/core/internal/core/port"
 	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
 )
 
@@ -52,9 +53,9 @@ func NewInternalDocumentController(
 
 // RegisterRoutes registers all internal document routes.
 // The API key is validated via middleware.
-func (c *InternalDocumentController) RegisterRoutes(api *gin.RouterGroup, apiKey string) {
+func (c *InternalDocumentController) RegisterRoutes(api *gin.RouterGroup, keyRepo port.AutomationAPIKeyRepository) {
 	internal := api.Group("/internal/documents")
-	internal.Use(middleware.APIKeyAuth(apiKey))
+	internal.Use(middleware.InternalKeyAuth(keyRepo))
 	{
 		internal.POST("/create", c.CreateDocument)
 	}

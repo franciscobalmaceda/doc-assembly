@@ -341,6 +341,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		automationKeyCtrl,
 		automationCtrl,
 		publicDocAuth,
+		automationAPIKeyRepo,
 		frontendFS,
 	)
 

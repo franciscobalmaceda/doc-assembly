@@ -83,6 +83,7 @@ func NewHTTPServer(
 	automationKeyController *controller.AutomationKeyController,
 	automationController *controller.AutomationController,
 	publicDocAuthenticator port.PublicDocumentAccessAuthenticator,
+	keyRepo port.AutomationAPIKeyRepository,
 	frontendFS fs.FS,
 ) *HTTPServer {
 	if cfg.Environment == "production" {
@@ -108,7 +109,7 @@ func NewHTTPServer(
 		base.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
-	registerInternalRoutes(base, cfg, internalDocController)
+	registerInternalRoutes(base, cfg, internalDocController, keyRepo)
 
 	requestTimeout := cfg.Server.WriteTimeoutDuration() - 2*time.Second
 	if requestTimeout <= 0 {
@@ -155,15 +156,15 @@ func NewHTTPServer(
 	}
 }
 
-// registerInternalRoutes registers internal API routes with API key authentication.
-func registerInternalRoutes(router gin.IRouter, cfg *config.Config, internalDocController *controller.InternalDocumentController) {
-	if cfg.InternalAPI.Enabled && cfg.InternalAPI.APIKey != "" {
+// registerInternalRoutes registers internal API routes with DB-backed API key authentication.
+func registerInternalRoutes(router gin.IRouter, cfg *config.Config, internalDocController *controller.InternalDocumentController, keyRepo port.AutomationAPIKeyRepository) {
+	if cfg.InternalAPI.Enabled {
 		internalV1 := router.Group("/api/v1")
 		internalV1.Use(middleware.Operation())
-		internalDocController.RegisterRoutes(internalV1, cfg.InternalAPI.APIKey)
+		internalDocController.RegisterRoutes(internalV1, keyRepo)
 		slog.InfoContext(context.Background(), "internal API routes registered")
 	} else {
-		slog.WarnContext(context.Background(), "internal API routes disabled (no API key configured)")
+		slog.WarnContext(context.Background(), "internal API routes disabled")
 	}
 }
 
