@@ -125,7 +125,7 @@ function EditorPage() {
   }, [])
 
   return (
-    <div className="flex flex-col h-screen min-w-0">
+    <div className="flex flex-col h-screen min-w-0 overflow-x-hidden">
       {/* Header */}
       <header className="flex min-w-0 items-center justify-between px-4 py-2 border-b bg-card">
         <div className="flex min-w-0 flex-1 items-center gap-4">

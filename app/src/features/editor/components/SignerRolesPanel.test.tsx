@@ -3,6 +3,10 @@ import { render, screen } from '@testing-library/react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { SignerRolesPanel } from './SignerRolesPanel'
 import { useSignerRolesStore } from '../stores/signer-roles-store'
+import {
+  PANEL_COLLAPSED_WIDTH,
+  ROLES_EXPANDED_WIDTH,
+} from '../layout/panel-widths'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: {
@@ -53,6 +57,12 @@ describe('SignerRolesPanel collapsed header', () => {
     expect(expandButton.className).toContain('flex')
     expect(expandButton.className).toContain('items-center')
     expect(expandButton.className).toContain('justify-center')
+
+    const panel = container.querySelector('aside')
+    expect(panel).toBeDefined()
+    expect(panel?.getAttribute('data-collapsed-width')).toBe(
+      String(PANEL_COLLAPSED_WIDTH)
+    )
   })
 
   it('keeps role cards constrained to available panel width in expanded mode', () => {
@@ -85,5 +95,11 @@ describe('SignerRolesPanel collapsed header', () => {
     expect(roleCard?.className).toContain('min-w-0')
     expect(roleCard?.className).toContain('max-w-full')
     expect(roleCard?.className).toContain('overflow-hidden')
+
+    const panel = container.querySelector('aside')
+    expect(panel).toBeDefined()
+    expect(panel?.getAttribute('data-expanded-width')).toBe(
+      ROLES_EXPANDED_WIDTH
+    )
   })
 })

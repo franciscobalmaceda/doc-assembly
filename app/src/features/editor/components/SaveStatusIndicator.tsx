@@ -201,7 +201,7 @@ export function SaveStatusIndicator({
     <motion.div
       layout
       className={cn(
-        'flex items-center gap-2 text-xs h-5 min-w-[120px] justify-end overflow-hidden',
+        'flex h-5 min-w-0 max-w-[240px] items-center justify-end gap-2 overflow-hidden text-xs',
         status === 'idle' && 'opacity-60',
         className
       )}
@@ -211,7 +211,10 @@ export function SaveStatusIndicator({
         {textContent && (
           <motion.span
             key={`${status}-${textContent}`}
-            className={cn('whitespace-nowrap', getTextClass())}
+            className={cn(
+              'inline-block min-w-0 max-w-[160px] truncate overflow-hidden whitespace-nowrap',
+              getTextClass()
+            )}
             variants={textVariants}
             initial="initial"
             animate="animate"
@@ -233,6 +236,7 @@ export function SaveStatusIndicator({
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.8, x: 20 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="shrink-0"
           >
             <Button
               variant="ghost"
