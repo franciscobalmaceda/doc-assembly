@@ -3,6 +3,7 @@ package migrations
 import (
 	"embed"
 	"fmt"
+	"net/url"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
@@ -22,7 +23,7 @@ func Run(cfg *config.DatabaseConfig) error {
 	}
 
 	connURL := fmt.Sprintf("pgx5://%s:%s@%s:%d/%s?sslmode=%s",
-		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, cfg.SSLMode,
+		url.PathEscape(cfg.User), url.PathEscape(cfg.Password), cfg.Host, cfg.Port, cfg.Name, cfg.SSLMode,
 	)
 
 	m, err := migrate.NewWithSourceInstance("iofs", src, connURL)
