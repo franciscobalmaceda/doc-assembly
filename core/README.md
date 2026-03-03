@@ -163,7 +163,8 @@ Copy `.env.example` to `.env` and configure the required values.
 | Variable                          | Description                         | Default      |
 | --------------------------------- | ----------------------------------- | ------------ |
 | `DOC_ENGINE_INTERNAL_API_ENABLED` | Enable internal API                 | true         |
-| `DOC_ENGINE_INTERNAL_API_API_KEY` | API key for service-to-service auth | **required** |
+
+> Internal API keys are managed via the admin UI (Administration > API Keys, type "internal").
 
 ### Documenso (e-signature)
 

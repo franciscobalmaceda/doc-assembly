@@ -184,7 +184,6 @@ Key variables:
 | `DOC_ENGINE_AUTH_AUDIENCE`        | Yes\*    | JWT audience claim                    |
 | `DOC_ENGINE_AUTH_DUMMY`           | No       | Set `true` to bypass JWT              |
 | `DOC_ENGINE_DOCUMENSO_API_KEY`    | No       | Documenso API key (for signing)       |
-| `DOC_ENGINE_INTERNAL_API_API_KEY` | No       | Internal API key (service-to-service) |
 
 \* Not required when `DOC_ENGINE_AUTH_DUMMY=true`.
 

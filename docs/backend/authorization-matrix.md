@@ -441,7 +441,7 @@ Este endpoint retorna los roles del usuario autenticado de forma condicional:
 
 | Header | Descripción |
 |--------|-------------|
-| `X-API-Key` | API Key configurada en `internal_api.api_key` |
+| `X-API-Key` | API Key de tipo "internal" (gestionada en admin UI) |
 | `X-Tenant-Code` | Código de tenant (no UUID) |
 | `X-Workspace-Code` | Código de workspace (no UUID) |
 | `X-Document-Type` | Código del tipo documental |
@@ -547,7 +547,7 @@ Contrato v1 actual (breaking change):
 # settings/app.yaml
 internal_api:
   enabled: true
-  api_key: ""  # DOC_ENGINE_INTERNAL_API_API_KEY
+# Las API keys se gestionan en admin UI (Administración > API Keys, tipo "internal")
 ```
 
 ---
