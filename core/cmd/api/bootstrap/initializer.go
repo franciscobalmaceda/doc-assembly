@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -89,6 +90,9 @@ func (a *appComponents) cleanup() {
 // initialize creates all components using manual DI.
 func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nolint:funlen // DI composition is inherently sequential
 	cfg := e.config
+	if strings.TrimSpace(e.signingSessionMode) != "" {
+		cfg.SigningSessionAuth.Mode = strings.TrimSpace(e.signingSessionMode)
+	}
 
 	// --- Database ---
 	pool, err := postgres.NewPool(ctx, &cfg.Database)
@@ -224,6 +228,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		eventEmitter, notificationSvc,
 		cfg.Scheduler.ExpirationDays,
 		documentAccessTokenRepo, documentFieldResponseRepo,
+		cfg.Storage.Enabled,
 	)
 
 	// --- River Job Queue (optional) ---
@@ -255,7 +260,17 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	preSigningSvc := documentsvc.NewPreSigningService(
 		documentAccessTokenRepo, documentFieldResponseRepo,
 		documentRepo, documentRecipientRepo, templateVersionRepo, templateVersionSignerRoleRepo,
-		pdfRenderer, signingProvider, storageAdapter, eventEmitter, publicURL,
+		pdfRenderer, signingProvider, storageAdapter, cfg.Storage.Enabled, eventEmitter, publicURL,
+	)
+	signingSessionSvc := documentsvc.NewSigningSessionService(
+		documentRepo,
+		documentRecipientRepo,
+		templateVersionRepo,
+		documentAccessTokenRepo,
+		preSigningSvc,
+		storageAdapter,
+		cfg.PublicAccess.TokenTTLHours,
+		cfg.Storage.Enabled,
 	)
 
 	// --- Use Cases: Automation ---
@@ -308,6 +323,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	)
 	publicDocAccessCtrl := controller.NewPublicDocumentAccessController(documentAccessSvc)
 	publicSigningCtrl := controller.NewPublicSigningController(preSigningSvc, documentAccessSvc, publicURL)
+	signingSessionCtrl := controller.NewSigningSessionController(signingSessionSvc)
 	automationKeyCtrl := controller.NewAutomationKeyController(automationAPIKeyUC)
 	automationCtrl := controller.NewAutomationController(
 		tenantSvc, workspaceSvc, injectableSvc,
@@ -338,9 +354,11 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		internalDocCtrl,
 		publicDocAccessCtrl,
 		publicSigningCtrl,
+		signingSessionCtrl,
 		automationKeyCtrl,
 		automationCtrl,
 		publicDocAuth,
+		e.signingSessionAuth,
 		automationAPIKeyRepo,
 		frontendFS,
 	)
@@ -414,6 +432,9 @@ func (e *Engine) resolveSigningProvider(cfg *config.Config) (port.SigningProvide
 func (e *Engine) resolveStorageAdapter(cfg *config.Config) (port.StorageAdapter, error) {
 	if e.storageAdapter != nil {
 		return e.storageAdapter, nil
+	}
+	if !cfg.Storage.Enabled {
+		return localstorage.New(cfg.Storage.LocalDir)
 	}
 	switch cfg.Storage.Provider {
 	case "s3":

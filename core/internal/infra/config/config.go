@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -76,7 +77,9 @@ func Load() (*Config, error) {
 	// Explicit env overrides for nested config (same Viper nested env issue).
 	applyServerEnvOverrides(&cfg.Server)
 	applySigningEnvOverrides(&cfg.Signing)
+	applyStorageEnvOverrides(&cfg.Storage)
 	applyAuthPanelEnvOverrides(cfg.Auth.Panel)
+	applySigningSessionAuthEnvOverrides(&cfg.SigningSessionAuth)
 	applyBootstrapEnvOverrides(&cfg.Bootstrap)
 
 	// Run OIDC discovery to populate issuer/jwks_url from discovery endpoints.
@@ -116,8 +119,18 @@ func setDefaults(v *viper.Viper) {
 	// Bootstrap defaults
 	v.SetDefault("bootstrap.enabled", true)
 
+	// Storage defaults
+	v.SetDefault("storage.enabled", true)
+	v.SetDefault("storage.provider", "local")
+	v.SetDefault("storage.local_dir", "./data/storage")
+
 	// Internal API defaults
 	v.SetDefault("internal_api.enabled", true)
+
+	// Signing session auth defaults
+	// NOTE: mode intentionally has no default and must be provided explicitly.
+	v.SetDefault("signing_session_auth.oidc.provider", "panel")
+	v.SetDefault("signing_session_auth.oidc.email_claim", "email")
 
 	// Environment default
 	v.SetDefault("environment", "development")
@@ -158,6 +171,34 @@ func applySigningEnvOverrides(cfg *SigningConfig) {
 	}
 	if v := os.Getenv("DOC_ENGINE_SIGNING_WEBHOOK_URL"); v != "" {
 		cfg.WebhookURL = v
+	}
+}
+
+// applyStorageEnvOverrides reads DOC_ENGINE_STORAGE_* env vars into StorageConfig.
+func applyStorageEnvOverrides(cfg *StorageConfig) {
+	if cfg == nil {
+		return
+	}
+
+	if v := strings.TrimSpace(os.Getenv("DOC_ENGINE_STORAGE_PROVIDER")); v != "" {
+		cfg.Provider = v
+	}
+	if v := strings.TrimSpace(os.Getenv("DOC_ENGINE_STORAGE_LOCAL_DIR")); v != "" {
+		cfg.LocalDir = v
+	}
+	if v := strings.TrimSpace(os.Getenv("DOC_ENGINE_STORAGE_BUCKET")); v != "" {
+		cfg.Bucket = v
+	}
+	if v := strings.TrimSpace(os.Getenv("DOC_ENGINE_STORAGE_REGION")); v != "" {
+		cfg.Region = v
+	}
+	if v := strings.TrimSpace(os.Getenv("DOC_ENGINE_STORAGE_ENDPOINT")); v != "" {
+		cfg.Endpoint = v
+	}
+	if v := strings.TrimSpace(os.Getenv("DOC_ENGINE_STORAGE_ENABLED")); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.Enabled = parsed
+		}
 	}
 }
 
@@ -204,6 +245,22 @@ func applyBootstrapEnvOverrides(cfg *BootstrapConfig) {
 	}
 }
 
+// applySigningSessionAuthEnvOverrides reads DOC_ENGINE_SIGNING_SESSION_AUTH_* env vars.
+func applySigningSessionAuthEnvOverrides(cfg *SigningSessionAuthConfig) {
+	if cfg == nil {
+		return
+	}
+	if v := strings.TrimSpace(os.Getenv("DOC_ENGINE_SIGNING_SESSION_AUTH_MODE")); v != "" {
+		cfg.Mode = v
+	}
+	if v := strings.TrimSpace(os.Getenv("DOC_ENGINE_SIGNING_SESSION_AUTH_OIDC_PROVIDER")); v != "" {
+		cfg.OIDC.Provider = v
+	}
+	if v := strings.TrimSpace(os.Getenv("DOC_ENGINE_SIGNING_SESSION_AUTH_OIDC_EMAIL_CLAIM")); v != "" {
+		cfg.OIDC.EmailClaim = v
+	}
+}
+
 // LoadFromFile reads configuration from a specific YAML file path.
 // Environment variables still apply as overrides.
 func LoadFromFile(filePath string) (*Config, error) {
@@ -246,8 +303,10 @@ func LoadFromFile(filePath string) (*Config, error) {
 	}
 
 	applySigningEnvOverrides(&cfg.Signing)
+	applyStorageEnvOverrides(&cfg.Storage)
 	applyServerEnvOverrides(&cfg.Server)
 	applyAuthPanelEnvOverrides(cfg.Auth.Panel)
+	applySigningSessionAuthEnvOverrides(&cfg.SigningSessionAuth)
 	applyBootstrapEnvOverrides(&cfg.Bootstrap)
 
 	if err := cfg.Auth.DiscoverAll(context.Background()); err != nil {

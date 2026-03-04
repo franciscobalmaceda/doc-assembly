@@ -24,6 +24,18 @@ const (
 		LIMIT 1
 	`
 
+	queryFindActiveByDocumentRecipientAndType = `
+		SELECT id, document_id, recipient_id, token, token_type, expires_at, used_at, created_at
+		FROM execution.document_access_tokens
+		WHERE document_id = $1
+		  AND recipient_id = $2
+		  AND token_type = $3
+		  AND used_at IS NULL
+		  AND expires_at > NOW()
+		ORDER BY created_at DESC
+		LIMIT 1
+	`
+
 	queryMarkAsUsed = `
 		UPDATE execution.document_access_tokens
 		SET used_at = NOW()

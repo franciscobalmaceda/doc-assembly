@@ -10,6 +10,7 @@ import (
 var (
 	ErrUnauthorized     = errors.New("unauthorized")
 	ErrForbidden        = errors.New("access denied")
+	ErrTooManyRequests  = errors.New("too many requests")
 	ErrInvalidToken     = errors.New("invalid token")
 	ErrTokenExpired     = errors.New("token expired")
 	ErrMissingToken     = errors.New("missing authorization token")

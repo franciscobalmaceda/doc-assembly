@@ -24,3 +24,27 @@ func TestApplyServerEnvOverrides_PublicSigningFrameAncestors(t *testing.T) {
 
 	assert.Equal(t, []string{"https://foo.example", "https://bar.example/"}, cfg.PublicSigningFrameAncestors)
 }
+
+func TestApplyStorageEnvOverrides(t *testing.T) {
+	t.Setenv("DOC_ENGINE_STORAGE_PROVIDER", "s3")
+	t.Setenv("DOC_ENGINE_STORAGE_LOCAL_DIR", "/tmp/doc-storage")
+	t.Setenv("DOC_ENGINE_STORAGE_BUCKET", "bucket-name")
+	t.Setenv("DOC_ENGINE_STORAGE_REGION", "us-central1")
+	t.Setenv("DOC_ENGINE_STORAGE_ENDPOINT", "https://storage.googleapis.com")
+	t.Setenv("DOC_ENGINE_STORAGE_ENABLED", "false")
+
+	cfg := &StorageConfig{
+		Enabled:  true,
+		Provider: "local",
+		LocalDir: "./data/storage",
+	}
+
+	applyStorageEnvOverrides(cfg)
+
+	assert.False(t, cfg.Enabled)
+	assert.Equal(t, "s3", cfg.Provider)
+	assert.Equal(t, "/tmp/doc-storage", cfg.LocalDir)
+	assert.Equal(t, "bucket-name", cfg.Bucket)
+	assert.Equal(t, "us-central1", cfg.Region)
+	assert.Equal(t, "https://storage.googleapis.com", cfg.Endpoint)
+}

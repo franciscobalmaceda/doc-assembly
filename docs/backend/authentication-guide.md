@@ -7,6 +7,8 @@ doc-assembly uses different access controls depending on the route group:
 | Mode | Route Scope | Auth Middleware | Identity Lookup |
 |---|---|---|---|
 | Panel OIDC | `/api/v1/*` (panel routes) | `PanelAuth` | Yes (DB via `IdentityContext`) |
+| Signing Session OIDC | `POST /api/v1/signing-sessions/:documentId` | `MultiOIDCAuth` + signing-session claims middleware | No |
+| Signing Session Custom | `POST /api/v1/signing-sessions/:documentId` | `SigningSessionCustomAuth` | No |
 | Internal API Key | `/api/v1/internal/*` | `APIKeyAuth` | No |
 | Public Access | `/public/*` | None by default, optional custom middleware for `/public/doc/:id` | No |
 | Dummy (dev only) | `/api/v1/*` (panel routes) | `DummyAuth` + `DummyIdentityAndRoles` | No |
@@ -38,6 +40,8 @@ auth:
 | `internal/adapters/primary/http/middleware/identity_context.go` | User sync/lookup in DB |
 | `internal/adapters/primary/http/middleware/system_context.go` | System role load |
 | `internal/adapters/primary/http/middleware/custom_public_document_access.go` | Optional custom auth for `/public/doc/:documentId` |
+| `internal/adapters/primary/http/middleware/signing_session_auth.go` | OIDC/custom auth claims for `/api/v1/signing-sessions/:documentId` |
+| `internal/adapters/primary/http/controller/signing_session_controller.go` | Authenticated signing-session endpoint |
 | `internal/infra/server/http.go` | Route groups + middleware wiring |
 | `internal/infra/config/discovery.go` | OIDC discovery |
 
@@ -95,7 +99,46 @@ sequenceDiagram
 
 ---
 
-## Flow 3: Public Access
+## Flow 3: Authenticated Signing Session
+
+`POST /api/v1/signing-sessions/:documentId` is isolated from the public email gate and supports two configuration modes:
+
+- `signing_session_auth.mode=oidc`: SDK validates JWT and extracts configured email claim.
+- `signing_session_auth.mode=custom`: integrator authenticator validates and returns claims.
+
+The endpoint always returns a `/public/sign/{token}` session URL (sign/view/download behavior depends on document state).
+
+SDK setup example:
+
+```go
+engine := sdk.New()
+
+// OIDC mode (SDK validates JWT)
+engine.SetSigningSessionAuthMode("oidc")
+
+// Custom mode (implementer validates and returns claims)
+engine.SetSigningSessionAuthMode("custom")
+engine.SetSigningSessionAuthenticator(myAuthenticator)
+```
+
+```mermaid
+sequenceDiagram
+    participant Front as CRM iframe client
+    participant G as Gin middleware
+    participant API as SigningSessionController
+    participant Svc as SigningSessionService
+
+    Front->>G: POST /api/v1/signing-sessions/:documentId + Bearer
+    G->>G: mode=oidc OR mode=custom auth
+    G->>API: injected auth claims
+    API->>Svc: CreateOrGetSession(documentId, principal)
+    Svc-->>API: sessionUrl + step/canSign/canDownload
+    API-->>Front: 200 JSON
+```
+
+---
+
+## Flow 4: Public Access
 
 Public signing/document routes are not protected by OIDC:
 
@@ -120,7 +163,7 @@ sequenceDiagram
 
 ---
 
-## Flow 4: Dummy Authentication (Development)
+## Flow 5: Dummy Authentication (Development)
 
 Activated when no panel OIDC provider is configured.
 
@@ -138,7 +181,7 @@ Behavior on panel routes:
 
 ---
 
-## Flow 5: OIDC Discovery
+## Flow 6: OIDC Discovery
 
 Runs during config load. If `discovery_url` is defined, discovery fetches OIDC metadata and fills missing fields such as `issuer`, `jwks_url`, and endpoints.
 
@@ -155,6 +198,7 @@ Key behavior:
 | Route Group | Auth |
 |---|---|
 | `/health`, `/ready`, `/swagger/*`, `/api/v1/config` | None |
+| `/api/v1/signing-sessions/*` | Signing-session auth mode (`oidc` or `custom`) |
 | `/api/v1/internal/*` | `APIKeyAuth` |
 | `/api/v1/*` panel routes | `DummyAuth` OR `PanelAuth + IdentityContext + SystemRoleContext` |
 | `/public/*` | None (optional custom middleware on `/public/doc/:documentId`) |
@@ -181,6 +225,9 @@ Key behavior:
 | `DOC_ENGINE_AUTH_JWKS_URL` | JWKS URL | Yes (OIDC mode) |
 | `DOC_ENGINE_AUTH_AUDIENCE` | Expected audience | No |
 | `DOC_ENGINE_AUTH_CLIENT_ID` | Frontend OIDC client ID | No |
+| `DOC_ENGINE_SIGNING_SESSION_AUTH_MODE` | Signing-session auth mode (`oidc` or `custom`) | Yes |
+| `DOC_ENGINE_SIGNING_SESSION_AUTH_OIDC_PROVIDER` | OIDC provider for signing-session mode | No (default `panel`) |
+| `DOC_ENGINE_SIGNING_SESSION_AUTH_OIDC_EMAIL_CLAIM` | Email claim key for recipient lookup | No (default `email`) |
 | `DOC_ENGINE_INTERNAL_API_ENABLED` | Enables internal API routes | No |
 | `DOC_ENGINE_INTERNAL_API_KEY` | Internal API key | Yes (if internal API enabled) |
 

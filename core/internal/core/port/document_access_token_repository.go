@@ -19,6 +19,10 @@ type DocumentAccessTokenRepository interface {
 	// for a recipient with a specific type (PRE_SIGNING or SIGNING).
 	FindActiveByRecipientAndType(ctx context.Context, recipientID, tokenType string) (*entity.DocumentAccessToken, error)
 
+	// FindActiveByDocumentAndRecipientAndType finds an active (unused,
+	// non-expired) token for a document+recipient and type.
+	FindActiveByDocumentAndRecipientAndType(ctx context.Context, documentID, recipientID, tokenType string) (*entity.DocumentAccessToken, error)
+
 	// MarkAsUsed marks an access token as used by setting its used_at timestamp.
 	MarkAsUsed(ctx context.Context, tokenID string) error
 

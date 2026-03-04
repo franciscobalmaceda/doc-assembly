@@ -243,6 +243,26 @@ func (d *Document) MarkAsError() error {
 	return nil
 }
 
+// RecoverToAwaitingInput transitions an ERROR document back to AWAITING_INPUT.
+func (d *Document) RecoverToAwaitingInput() error {
+	if d.Status != DocumentStatusError {
+		return ErrInvalidDocumentStatusTransition
+	}
+	d.Status = DocumentStatusAwaitingInput
+	d.touch()
+	return nil
+}
+
+// RecoverToPendingProvider transitions an ERROR document back to PENDING_PROVIDER.
+func (d *Document) RecoverToPendingProvider() error {
+	if d.Status != DocumentStatusError {
+		return ErrInvalidDocumentStatusTransition
+	}
+	d.Status = DocumentStatusPendingProvider
+	d.touch()
+	return nil
+}
+
 // UpdateStatus updates the document status from provider status.
 func (d *Document) UpdateStatus(newStatus DocumentStatus) error {
 	if !newStatus.IsValid() {

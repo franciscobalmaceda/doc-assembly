@@ -153,6 +153,7 @@ func newDocService(t *testing.T, pool *pgxpool.Pool) *documentsvc.DocumentServic
 		docRepo, recipientRepo, tmplRepo, versionRepo, signerRoleRepo,
 		mockPDF, mockSigning, storageAdapter, eventEmitter, notifSvc,
 		30, accessTokenRepo, fieldResponseRepo,
+		true,
 	)
 }
 

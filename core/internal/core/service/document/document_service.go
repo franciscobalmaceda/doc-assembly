@@ -31,6 +31,7 @@ func NewDocumentService(
 	expirationDays int,
 	accessTokenRepo port.DocumentAccessTokenRepository,
 	fieldResponseRepo port.DocumentFieldResponseRepository,
+	storageEnabled bool,
 ) *DocumentService {
 	return &DocumentService{
 		documentRepo:      documentRepo,
@@ -46,6 +47,7 @@ func NewDocumentService(
 		expirationDays:    expirationDays,
 		accessTokenRepo:   accessTokenRepo,
 		fieldResponseRepo: fieldResponseRepo,
+		storageEnabled:    storageEnabled,
 	}
 }
 
@@ -64,6 +66,7 @@ type DocumentService struct {
 	expirationDays    int
 	accessTokenRepo   port.DocumentAccessTokenRepository
 	fieldResponseRepo port.DocumentFieldResponseRepository
+	storageEnabled    bool
 
 	completionNotifier port.DocumentCompletionNotifier
 }
@@ -645,12 +648,18 @@ func (s *DocumentService) ProcessPendingProviderDocuments(ctx context.Context, l
 func (s *DocumentService) uploadPendingProviderDocument(ctx context.Context, doc *entity.Document) error {
 	if doc.PDFStoragePath == nil || *doc.PDFStoragePath == "" {
 		s.markDocError(ctx, doc)
+		if recoverErr := s.recoverPreProviderError(ctx, doc); recoverErr != nil {
+			return fmt.Errorf("document %s has no PDF storage path: %w", doc.ID, recoverErr)
+		}
 		return fmt.Errorf("document %s has no PDF storage path", doc.ID)
 	}
 
 	pdfData, err := s.storageAdapter.Download(ctx, &port.StorageRequest{Key: *doc.PDFStoragePath})
 	if err != nil {
 		s.markDocError(ctx, doc)
+		if recoverErr := s.recoverPreProviderError(ctx, doc); recoverErr != nil {
+			return fmt.Errorf("downloading PDF for document %s: %w (recovery failed: %v)", doc.ID, err, recoverErr)
+		}
 		return fmt.Errorf("downloading PDF for document %s: %w", doc.ID, err)
 	}
 
@@ -784,10 +793,13 @@ func (s *DocumentService) GetDocumentStatistics(ctx context.Context, workspaceID
 
 // downloadAndStorePDF downloads the signed PDF from the provider and stores it locally.
 func (s *DocumentService) downloadAndStorePDF(ctx context.Context, doc *entity.Document) {
+	if !s.storageEnabled {
+		return
+	}
 	if !doc.HasSignerInfo() {
 		return
 	}
-	if doc.PDFStoragePath != nil {
+	if hasStoredPDFPath(doc) {
 		return
 	}
 
@@ -831,7 +843,20 @@ func (s *DocumentService) GetDocumentPDF(ctx context.Context, documentID string)
 		return nil, "", fmt.Errorf("finding document: %w", err)
 	}
 
-	if doc.PDFStoragePath == nil {
+	if !s.storageEnabled {
+		if !doc.HasSignerInfo() {
+			return nil, "", fmt.Errorf("signed PDF not available for this document")
+		}
+		data, downloadErr := s.signingProvider.DownloadSignedPDF(ctx, &port.DownloadSignedPDFRequest{
+			ProviderDocumentID: *doc.SignerDocumentID,
+		})
+		if downloadErr != nil {
+			return nil, "", fmt.Errorf("downloading PDF from signing provider: %w", downloadErr)
+		}
+		return data, signedDocumentFilename(doc), nil
+	}
+
+	if !hasStoredPDFPath(doc) {
 		return nil, "", fmt.Errorf("signed PDF not available for this document")
 	}
 
@@ -840,12 +865,7 @@ func (s *DocumentService) GetDocumentPDF(ctx context.Context, documentID string)
 		return nil, "", fmt.Errorf("downloading PDF from storage: %w", err)
 	}
 
-	filename := fmt.Sprintf("document-%s-signed.pdf", doc.ID)
-	if doc.Title != nil {
-		filename = fmt.Sprintf("%s-signed.pdf", *doc.Title)
-	}
-
-	return data, filename, nil
+	return data, signedDocumentFilename(doc), nil
 }
 
 // ExpireDocuments finds and expires documents that have passed their expiration time.
@@ -933,11 +953,49 @@ func (s *DocumentService) retrySingleDocument(ctx context.Context, doc *entity.D
 
 	if doc.HasSignerInfo() {
 		s.retryWithStatusPoll(ctx, doc)
-	} else {
-		slog.InfoContext(ctx, "retry skipped for document without provider reference",
-			slog.String("document_id", doc.ID),
-		)
+		return
 	}
+
+	if err := s.recoverPreProviderError(ctx, doc); err != nil {
+		slog.WarnContext(ctx, "retry recovery failed for document without provider reference",
+			slog.String("document_id", doc.ID),
+			slog.String("error", err.Error()),
+		)
+		if updateErr := s.documentRepo.Update(ctx, doc); updateErr != nil {
+			slog.WarnContext(ctx, "failed to persist retry state",
+				slog.String("document_id", doc.ID),
+				slog.String("error", updateErr.Error()),
+			)
+		}
+	}
+}
+
+func (s *DocumentService) recoverPreProviderError(ctx context.Context, doc *entity.Document) error {
+	target, clearStalePDFPath := resolvePreProviderRecoveryTarget(ctx, s.storageAdapter, s.storageEnabled, doc)
+	if clearStalePDFPath {
+		doc.PDFStoragePath = nil
+	}
+
+	var err error
+	if target == entity.DocumentStatusPendingProvider {
+		err = doc.RecoverToPendingProvider()
+	} else {
+		err = doc.RecoverToAwaitingInput()
+	}
+	if err != nil {
+		return err
+	}
+
+	doc.ResetRetry()
+	if err := s.documentRepo.Update(ctx, doc); err != nil {
+		return fmt.Errorf("persisting recovered document: %w", err)
+	}
+
+	slog.InfoContext(ctx, "recovered pre-provider error document",
+		slog.String("document_id", doc.ID),
+		slog.String("status", target.String()),
+	)
+	return nil
 }
 
 // retryWithStatusPoll polls the signing provider for a document that already has a signer ID.

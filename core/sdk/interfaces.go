@@ -53,6 +53,10 @@ type WorkspaceInjectableProvider = port.WorkspaceInjectableProvider
 // PublicDocumentAccessAuthenticator provides custom auth for /public/doc/:documentId.
 type PublicDocumentAccessAuthenticator = port.PublicDocumentAccessAuthenticator
 
+// SigningSessionAuthenticator provides custom auth for
+// /api/v1/signing-sessions/:documentId.
+type SigningSessionAuthenticator = port.SigningSessionAuthenticator
+
 // SigningProvider handles document signing via an external provider.
 type SigningProvider = port.SigningProvider
 
@@ -87,6 +91,9 @@ type (
 
 // PublicDocumentAccessAuthenticator types
 type PublicDocumentAccessClaims = port.PublicDocumentAccessClaims
+
+// SigningSessionAuthenticator types
+type SigningSessionAuthClaims = port.SigningSessionAuthClaims
 
 // SigningProvider types
 type (
@@ -145,3 +152,6 @@ type (
 
 // PublicDocumentAccessAuthenticator request type
 type AuthenticateRequest = port.AuthenticateRequest
+
+// SigningSessionAuthenticator request type
+type SigningSessionAuthenticateRequest = port.SigningSessionAuthenticateRequest

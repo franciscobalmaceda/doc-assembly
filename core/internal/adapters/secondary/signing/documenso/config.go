@@ -2,6 +2,8 @@ package documenso
 
 import (
 	"errors"
+	"net/url"
+	"path"
 	"strings"
 )
 
@@ -39,6 +41,7 @@ func (c *Config) Validate() error {
 
 	// Ensure base URL doesn't have trailing slash
 	c.BaseURL = strings.TrimSuffix(c.BaseURL, "/")
+	c.BaseURL = normalizeDocumensoAPIBaseURL(c.BaseURL)
 
 	// Derive signing base URL from API base URL if not set
 	if strings.TrimSpace(c.SigningBaseURL) == "" {
@@ -59,4 +62,22 @@ func DefaultConfig() *Config {
 	return &Config{
 		BaseURL: "https://app.documenso.com/api/v2",
 	}
+}
+
+func normalizeDocumensoAPIBaseURL(baseURL string) string {
+	parsed, err := url.Parse(baseURL)
+	if err != nil {
+		return strings.TrimSuffix(baseURL, "/")
+	}
+
+	normalizedPath := strings.TrimSuffix(parsed.Path, "/")
+	if normalizedPath == "" {
+		normalizedPath = "/"
+	}
+	if strings.Contains(normalizedPath, "/api/") {
+		return strings.TrimSuffix(baseURL, "/")
+	}
+
+	parsed.Path = path.Join(normalizedPath, "/api/v2")
+	return strings.TrimSuffix(parsed.String(), "/")
 }

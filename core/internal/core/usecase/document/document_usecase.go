@@ -87,7 +87,7 @@ type DocumentUseCase interface {
 
 	// RetryErrorDocuments finds ERROR documents eligible for retry and attempts recovery.
 	// Documents with a signer_document_id are polled for status updates.
-	// Documents without signer provider reference are skipped.
+	// Pre-provider errors are recovered back to the signing pipeline.
 	RetryErrorDocuments(ctx context.Context, maxRetries, limit int) error
 
 	// CreateDocumentsBatch creates multiple documents in a single batch.

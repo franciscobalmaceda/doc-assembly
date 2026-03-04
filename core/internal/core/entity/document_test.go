@@ -211,6 +211,36 @@ func TestDocument_MarkAsError(t *testing.T) {
 	}
 }
 
+func TestDocument_RecoverToAwaitingInput(t *testing.T) {
+	t.Run("from ERROR succeeds", func(t *testing.T) {
+		d := &Document{Status: DocumentStatusError}
+		err := d.RecoverToAwaitingInput()
+		assert.NoError(t, err)
+		assert.Equal(t, DocumentStatusAwaitingInput, d.Status)
+	})
+
+	t.Run("from non-ERROR fails", func(t *testing.T) {
+		d := &Document{Status: DocumentStatusPending}
+		err := d.RecoverToAwaitingInput()
+		assert.ErrorIs(t, err, ErrInvalidDocumentStatusTransition)
+	})
+}
+
+func TestDocument_RecoverToPendingProvider(t *testing.T) {
+	t.Run("from ERROR succeeds", func(t *testing.T) {
+		d := &Document{Status: DocumentStatusError}
+		err := d.RecoverToPendingProvider()
+		assert.NoError(t, err)
+		assert.Equal(t, DocumentStatusPendingProvider, d.Status)
+	})
+
+	t.Run("from non-ERROR fails", func(t *testing.T) {
+		d := &Document{Status: DocumentStatusPending}
+		err := d.RecoverToPendingProvider()
+		assert.ErrorIs(t, err, ErrInvalidDocumentStatusTransition)
+	})
+}
+
 func TestDocument_UpdateStatus(t *testing.T) {
 	tests := []struct {
 		name      string

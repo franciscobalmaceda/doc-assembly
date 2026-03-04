@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres"
+	"github.com/rendis/doc-assembly/core/internal/infra/config"
 )
 
 // preflightChecks runs all startup validations.
@@ -36,6 +37,9 @@ func (e *Engine) preflightChecks(ctx context.Context) error {
 	}
 
 	checkAuth(ctx, e)
+	if err := checkSigningSessionAuth(ctx, e); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -136,4 +140,49 @@ func checkAuth(ctx context.Context, e *Engine) {
 	slog.InfoContext(ctx, "panel OIDC configured",
 		slog.String("name", panel.Name),
 		slog.String("issuer", panel.Issuer))
+}
+
+func checkSigningSessionAuth(ctx context.Context, e *Engine) error {
+	mode := strings.TrimSpace(e.signingSessionMode)
+	if mode == "" {
+		mode = e.config.SigningSessionAuth.Mode
+	}
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	if mode == "" {
+		return fmt.Errorf("missing required config: signing_session_auth.mode (expected 'oidc' or 'custom')")
+	}
+
+	switch mode {
+	case config.SigningSessionAuthModeOIDC:
+		panel := e.config.Auth.GetPanelOIDC()
+		if panel == nil {
+			return fmt.Errorf("signing_session_auth.mode=oidc requires auth.panel OIDC configuration")
+		}
+		requestedProvider := strings.TrimSpace(e.config.SigningSessionAuth.OIDC.Provider)
+		if requestedProvider != "" &&
+			!strings.EqualFold(requestedProvider, "panel") &&
+			!strings.EqualFold(requestedProvider, panel.Name) {
+			return fmt.Errorf(
+				"unsupported signing_session_auth.oidc.provider=%q (supported: panel or %q)",
+				requestedProvider,
+				panel.Name,
+			)
+		}
+		slog.InfoContext(ctx, "signing session auth mode configured",
+			slog.String("mode", mode),
+			slog.String("provider", strings.TrimSpace(e.config.SigningSessionAuth.OIDC.Provider)),
+			slog.String("email_claim", strings.TrimSpace(e.config.SigningSessionAuth.OIDC.EmailClaim)),
+		)
+		return nil
+	case config.SigningSessionAuthModeCustom:
+		if e.signingSessionAuth == nil {
+			return fmt.Errorf("signing_session_auth.mode=custom requires SetSigningSessionAuthenticator(...)")
+		}
+		slog.InfoContext(ctx, "signing session auth mode configured",
+			slog.String("mode", mode),
+		)
+		return nil
+	default:
+		return fmt.Errorf("invalid signing_session_auth.mode=%q (expected 'oidc' or 'custom')", mode)
+	}
 }

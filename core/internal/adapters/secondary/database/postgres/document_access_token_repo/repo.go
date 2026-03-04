@@ -51,6 +51,18 @@ func (r *Repository) FindActiveByRecipientAndType(ctx context.Context, recipient
 	return scanToken(row)
 }
 
+// FindActiveByDocumentAndRecipientAndType finds an active (unused,
+// non-expired) token for a document+recipient and type.
+func (r *Repository) FindActiveByDocumentAndRecipientAndType(
+	ctx context.Context,
+	documentID,
+	recipientID,
+	tokenType string,
+) (*entity.DocumentAccessToken, error) {
+	row := r.pool.QueryRow(ctx, queryFindActiveByDocumentRecipientAndType, documentID, recipientID, tokenType)
+	return scanToken(row)
+}
+
 // MarkAsUsed marks an access token as used by setting its used_at timestamp.
 func (r *Repository) MarkAsUsed(ctx context.Context, tokenID string) error {
 	_, err := r.pool.Exec(ctx, queryMarkAsUsed, tokenID)

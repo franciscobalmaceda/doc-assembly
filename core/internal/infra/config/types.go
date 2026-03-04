@@ -7,22 +7,23 @@ import (
 
 // Config represents the complete application configuration.
 type Config struct {
-	Environment        string                  `mapstructure:"environment"`
-	EnvironmentAliases map[string][]string     `mapstructure:"environment_aliases"`
-	Server             ServerConfig            `mapstructure:"server"`
-	Database           DatabaseConfig          `mapstructure:"database"`
-	Auth               AuthConfig              `mapstructure:"auth"`
-	InternalAPI        InternalAPIConfig       `mapstructure:"internal_api"`
-	Signing            SigningConfig           `mapstructure:"signing"`
-	Storage            StorageConfig           `mapstructure:"storage"`
-	Logging            LoggingConfig           `mapstructure:"logging"`
-	Typst              TypstConfig             `mapstructure:"typst"`
-	Bootstrap          BootstrapConfig         `mapstructure:"bootstrap"`
-	Scheduler          SchedulerConfig         `mapstructure:"scheduler"`
-	Notification       NotificationConfig      `mapstructure:"notification"`
-	PublicAccess       PublicAccessConfig      `mapstructure:"public_access"`
-	Worker             WorkerConfig            `mapstructure:"worker"`
-	InjectableSources  InjectableSourcesConfig `mapstructure:"injectable_sources"`
+	Environment        string                   `mapstructure:"environment"`
+	EnvironmentAliases map[string][]string      `mapstructure:"environment_aliases"`
+	Server             ServerConfig             `mapstructure:"server"`
+	Database           DatabaseConfig           `mapstructure:"database"`
+	Auth               AuthConfig               `mapstructure:"auth"`
+	SigningSessionAuth SigningSessionAuthConfig `mapstructure:"signing_session_auth"`
+	InternalAPI        InternalAPIConfig        `mapstructure:"internal_api"`
+	Signing            SigningConfig            `mapstructure:"signing"`
+	Storage            StorageConfig            `mapstructure:"storage"`
+	Logging            LoggingConfig            `mapstructure:"logging"`
+	Typst              TypstConfig              `mapstructure:"typst"`
+	Bootstrap          BootstrapConfig          `mapstructure:"bootstrap"`
+	Scheduler          SchedulerConfig          `mapstructure:"scheduler"`
+	Notification       NotificationConfig       `mapstructure:"notification"`
+	PublicAccess       PublicAccessConfig       `mapstructure:"public_access"`
+	Worker             WorkerConfig             `mapstructure:"worker"`
+	InjectableSources  InjectableSourcesConfig  `mapstructure:"injectable_sources"`
 
 	// DummyAuthUserID is the internal DB user ID for dummy auth mode.
 	// Set at runtime after seeding the dummy user (not loaded from YAML).
@@ -103,6 +104,30 @@ type AuthConfig struct {
 	Panel *OIDCProvider `mapstructure:"panel"`
 }
 
+// Signing session auth mode values.
+const (
+	SigningSessionAuthModeOIDC   = "oidc"
+	SigningSessionAuthModeCustom = "custom"
+)
+
+// SigningSessionAuthConfig configures authentication for
+// /api/v1/signing-sessions/:documentId.
+type SigningSessionAuthConfig struct {
+	Mode string                       `mapstructure:"mode"`
+	OIDC SigningSessionOIDCAuthConfig `mapstructure:"oidc"`
+}
+
+// NormalizedMode returns the signing session auth mode in lowercase.
+func (c SigningSessionAuthConfig) NormalizedMode() string {
+	return strings.ToLower(strings.TrimSpace(c.Mode))
+}
+
+// SigningSessionOIDCAuthConfig configures SDK-managed OIDC auth mode.
+type SigningSessionOIDCAuthConfig struct {
+	Provider   string `mapstructure:"provider"`    // "panel" or configured provider name
+	EmailClaim string `mapstructure:"email_claim"` // claim key used as recipient email
+}
+
 // GetPanelOIDC returns the OIDC provider for panel (login/UI) authentication.
 // Returns nil if the provider is not meaningfully configured (no issuer and no discovery URL).
 func (a *AuthConfig) GetPanelOIDC() *OIDCProvider {
@@ -152,6 +177,7 @@ type SigningConfig struct {
 
 // StorageConfig holds object storage configuration.
 type StorageConfig struct {
+	Enabled  bool   `mapstructure:"enabled"`
 	Provider string `mapstructure:"provider"`  // "s3" or "local"
 	LocalDir string `mapstructure:"local_dir"` // Base directory for local storage
 	Bucket   string `mapstructure:"bucket"`

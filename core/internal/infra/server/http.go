@@ -81,9 +81,11 @@ func NewHTTPServer(
 	internalDocController *controller.InternalDocumentController,
 	publicDocAccessController *controller.PublicDocumentAccessController,
 	publicSigningController *controller.PublicSigningController,
+	signingSessionController *controller.SigningSessionController,
 	automationKeyController *controller.AutomationKeyController,
 	automationController *controller.AutomationController,
 	publicDocAuthenticator port.PublicDocumentAccessAuthenticator,
+	signingSessionAuthenticator port.SigningSessionAuthenticator,
 	keyRepo port.AutomationAPIKeyRepository,
 	frontendFS fs.FS,
 ) *HTTPServer {
@@ -128,6 +130,7 @@ func NewHTTPServer(
 		tenantController, documentTypeController, processController, workspaceController,
 		injectableController, templateController, documentController)
 	automationKeyController.RegisterRoutes(v1)
+	registerSigningSessionRoutes(base, cfg, requestTimeout, signingSessionController, signingSessionAuthenticator)
 
 	webhookController.RegisterRoutes(base)
 
@@ -173,6 +176,62 @@ func registerInternalRoutes(router gin.IRouter, cfg *config.Config, internalDocC
 	} else {
 		slog.WarnContext(context.Background(), "internal API routes disabled")
 	}
+}
+
+func registerSigningSessionRoutes(
+	router gin.IRouter,
+	cfg *config.Config,
+	requestTimeout time.Duration,
+	signingSessionController *controller.SigningSessionController,
+	signingSessionAuthenticator port.SigningSessionAuthenticator,
+) {
+	if signingSessionController == nil {
+		return
+	}
+
+	v1 := router.Group("/api/v1")
+	v1.Use(noCacheAPI())
+	v1.Use(middleware.Operation())
+	v1.Use(middleware.RequestTimeout(requestTimeout))
+
+	mode := cfg.SigningSessionAuth.NormalizedMode()
+	switch mode {
+	case config.SigningSessionAuthModeOIDC:
+		provider, err := resolveSigningSessionOIDCProvider(cfg)
+		if err != nil {
+			slog.Error("failed to configure signing session OIDC auth", slog.Any("error", err))
+			return
+		}
+
+		emailClaim := strings.TrimSpace(cfg.SigningSessionAuth.OIDC.EmailClaim)
+		v1.Use(middleware.MultiOIDCAuth([]config.OIDCProvider{*provider}))
+		v1.Use(middleware.SigningSessionOIDCClaims(emailClaim, provider.Name))
+	case config.SigningSessionAuthModeCustom:
+		v1.Use(middleware.SigningSessionCustomAuth(signingSessionAuthenticator))
+	default:
+		slog.Error("invalid signing session auth mode", slog.String("mode", mode))
+		return
+	}
+
+	signingSessionController.RegisterRoutes(v1)
+}
+
+func resolveSigningSessionOIDCProvider(cfg *config.Config) (*config.OIDCProvider, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("missing config")
+	}
+
+	panel := cfg.Auth.GetPanelOIDC()
+	if panel == nil {
+		return nil, fmt.Errorf("signing_session_auth.mode=oidc requires auth.panel configuration")
+	}
+
+	requested := strings.TrimSpace(cfg.SigningSessionAuth.OIDC.Provider)
+	if requested == "" || strings.EqualFold(requested, "panel") || strings.EqualFold(requested, panel.Name) {
+		return panel, nil
+	}
+
+	return nil, fmt.Errorf("unsupported signing_session_auth.oidc.provider=%q (supported: panel or %q)", requested, panel.Name)
 }
 
 // setupPanelRoutes creates the panel route group with authentication middleware.

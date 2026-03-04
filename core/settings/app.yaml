@@ -53,6 +53,12 @@ auth:
     audience: ${DOC_ENGINE_AUTH_AUDIENCE:}
     client_id: ${DOC_ENGINE_AUTH_CLIENT_ID:}
 
+signing_session_auth:
+  mode: oidc # DOC_ENGINE_SIGNING_SESSION_AUTH_MODE - "oidc" or "custom"
+  oidc:
+    provider: panel # DOC_ENGINE_SIGNING_SESSION_AUTH_OIDC_PROVIDER
+    email_claim: email # DOC_ENGINE_SIGNING_SESSION_AUTH_OIDC_EMAIL_CLAIM
+
 # Internal API for service-to-service communication
 internal_api:
   enabled: true
@@ -67,6 +73,7 @@ signing:
   webhook_url: ""             # DOC_ENGINE_SIGNING_WEBHOOK_URL (public URL for receiving webhooks)
 
 storage:
+  enabled: true               # DOC_ENGINE_STORAGE_ENABLED
   provider: "local"            # DOC_ENGINE_STORAGE_PROVIDER - "s3" or "local"
   local_dir: "./data/storage"  # DOC_ENGINE_STORAGE_LOCAL_DIR - Base directory for local storage
   bucket: "contracts-bucket"

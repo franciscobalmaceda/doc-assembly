@@ -3,6 +3,7 @@ package document
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/rendis/doc-assembly/core/internal/core/entity"
 	"github.com/rendis/doc-assembly/core/internal/core/entity/portabledoc"
@@ -120,4 +121,48 @@ func documentTitle(doc *entity.Document) string {
 		return *doc.Title
 	}
 	return doc.ID
+}
+
+func hasStoredPDFPath(doc *entity.Document) bool {
+	return doc != nil && doc.PDFStoragePath != nil && *doc.PDFStoragePath != ""
+}
+
+func resolvePreProviderRecoveryTarget(
+	ctx context.Context,
+	storageAdapter port.StorageAdapter,
+	storageEnabled bool,
+	doc *entity.Document,
+) (entity.DocumentStatus, bool) {
+	if !storageEnabled {
+		return entity.DocumentStatusAwaitingInput, false
+	}
+
+	if !hasStoredPDFPath(doc) {
+		return entity.DocumentStatusAwaitingInput, false
+	}
+
+	if storageAdapter == nil {
+		return entity.DocumentStatusAwaitingInput, true
+	}
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	exists, err := storageAdapter.Exists(ctx, &port.StorageRequest{Key: *doc.PDFStoragePath})
+	if err != nil || !exists {
+		return entity.DocumentStatusAwaitingInput, true
+	}
+
+	return entity.DocumentStatusPendingProvider, false
+}
+
+func signedDocumentFilename(doc *entity.Document) string {
+	if doc != nil && doc.Title != nil {
+		return fmt.Sprintf("%s-signed.pdf", *doc.Title)
+	}
+	if doc != nil {
+		return fmt.Sprintf("document-%s-signed.pdf", doc.ID)
+	}
+	return "document-signed.pdf"
 }

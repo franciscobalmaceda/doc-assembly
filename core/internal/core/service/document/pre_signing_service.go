@@ -27,6 +27,7 @@ type PreSigningService struct {
 	pdfRenderer       port.PDFRenderer
 	signingProvider   port.SigningProvider
 	storageAdapter    port.StorageAdapter
+	storageEnabled    bool
 	eventEmitter      *EventEmitter
 	publicURL         string
 }
@@ -42,6 +43,7 @@ func NewPreSigningService(
 	pdfRenderer port.PDFRenderer,
 	signingProvider port.SigningProvider,
 	storageAdapter port.StorageAdapter,
+	storageEnabled bool,
 	eventEmitter *EventEmitter,
 	publicURL string,
 ) documentuc.PreSigningUseCase {
@@ -55,6 +57,7 @@ func NewPreSigningService(
 		pdfRenderer:       pdfRenderer,
 		signingProvider:   signingProvider,
 		storageAdapter:    storageAdapter,
+		storageEnabled:    storageEnabled,
 		eventEmitter:      eventEmitter,
 		publicURL:         publicURL,
 	}
@@ -75,6 +78,16 @@ func (s *PreSigningService) GetPublicSigningPage(ctx context.Context, token stri
 	recipient, err := s.recipientRepo.FindByID(ctx, accessToken.RecipientID)
 	if err != nil {
 		return nil, fmt.Errorf("finding recipient: %w", err)
+	}
+
+	if doc.Status == entity.DocumentStatusError && !doc.HasSignerInfo() {
+		if err := s.recoverPreProviderError(ctx, doc); err != nil {
+			return nil, fmt.Errorf("document is not in a valid state for signing")
+		}
+		doc, err = s.documentRepo.FindByID(ctx, accessToken.DocumentID)
+		if err != nil {
+			return nil, fmt.Errorf("reloading document after recovery: %w", err)
+		}
 	}
 
 	title := documentTitle(doc)
@@ -195,6 +208,16 @@ func (s *PreSigningService) ProceedToSigning(ctx context.Context, token string) 
 		return nil, fmt.Errorf("finding recipient: %w", err)
 	}
 
+	if doc.Status == entity.DocumentStatusError && !doc.HasSignerInfo() {
+		if err := s.recoverPreProviderError(ctx, doc); err != nil {
+			return nil, fmt.Errorf("document is not pending signing")
+		}
+		doc, err = s.documentRepo.FindByID(ctx, accessToken.DocumentID)
+		if err != nil {
+			return nil, fmt.Errorf("reloading document after recovery: %w", err)
+		}
+	}
+
 	// If document is still AWAITING_INPUT, atomically claim and render + upload.
 	// Only one concurrent caller wins the CAS; losers reload and fall through.
 	if doc.IsAwaitingInput() {
@@ -281,6 +304,30 @@ func (s *PreSigningService) claimAndRender(
 	)
 
 	return doc, recipient, nil
+}
+
+func (s *PreSigningService) recoverPreProviderError(ctx context.Context, doc *entity.Document) error {
+	if doc == nil || doc.Status != entity.DocumentStatusError || doc.HasSignerInfo() {
+		return entity.ErrInvalidDocumentState
+	}
+
+	target, clearStalePDFPath := resolvePreProviderRecoveryTarget(ctx, s.storageAdapter, s.storageEnabled, doc)
+	if clearStalePDFPath {
+		doc.PDFStoragePath = nil
+	}
+
+	if target == entity.DocumentStatusPendingProvider {
+		if err := doc.RecoverToPendingProvider(); err != nil {
+			return err
+		}
+	} else {
+		if err := doc.RecoverToAwaitingInput(); err != nil {
+			return err
+		}
+	}
+
+	doc.ResetRetry()
+	return s.documentRepo.Update(ctx, doc)
 }
 
 // CompleteEmbeddedSigning marks the token as used after embedded signing is completed.
@@ -432,7 +479,18 @@ func (s *PreSigningService) DownloadCompletedPDF(ctx context.Context, token stri
 		return nil, "", fmt.Errorf("completed PDF is not available for this recipient")
 	}
 
-	if doc.PDFStoragePath == nil || *doc.PDFStoragePath == "" {
+	if !s.storageEnabled {
+		if !doc.HasSignerInfo() {
+			return nil, "", fmt.Errorf("completed PDF is not available")
+		}
+		pdfData, err := s.signingProvider.DownloadSignedPDF(ctx, &port.DownloadSignedPDFRequest{ProviderDocumentID: *doc.SignerDocumentID})
+		if err != nil {
+			return nil, "", fmt.Errorf("downloading completed PDF: %w", err)
+		}
+		return pdfData, signedDocumentFilename(doc), nil
+	}
+
+	if !hasStoredPDFPath(doc) {
 		if !doc.HasSignerInfo() {
 			return nil, "", fmt.Errorf("completed PDF is not available")
 		}
@@ -461,12 +519,7 @@ func (s *PreSigningService) DownloadCompletedPDF(ctx context.Context, token stri
 		return nil, "", fmt.Errorf("downloading completed PDF: %w", err)
 	}
 
-	filename := fmt.Sprintf("document-%s-signed.pdf", doc.ID)
-	if doc.Title != nil {
-		filename = fmt.Sprintf("%s-signed.pdf", *doc.Title)
-	}
-
-	return pdfData, filename, nil
+	return pdfData, signedDocumentFilename(doc), nil
 }
 
 // hasFieldResponses checks whether field responses have been saved for a document.
@@ -1155,15 +1208,17 @@ func (s *PreSigningService) renderAndSendToProvider(
 	}
 
 	storagePath := fmt.Sprintf("documents/%s/%s/pre-signed.pdf", doc.WorkspaceID, doc.ID)
-	if err := s.storageAdapter.Upload(ctx, &port.StorageUploadRequest{Key: storagePath, Data: renderResult.PDF, ContentType: "application/pdf"}); err != nil {
-		return fmt.Errorf("storing PDF: %w", err)
-	}
-	doc.SetPDFPath(storagePath)
+	if s.storageEnabled {
+		if err := s.storageAdapter.Upload(ctx, &port.StorageUploadRequest{Key: storagePath, Data: renderResult.PDF, ContentType: "application/pdf"}); err != nil {
+			return fmt.Errorf("storing PDF: %w", err)
+		}
+		doc.SetPDFPath(storagePath)
 
-	// Status is already PENDING_PROVIDER (set by ClaimForSigning CAS).
-	// Persist the PDF storage path as a durable checkpoint for the background worker.
-	if err := s.documentRepo.Update(ctx, doc); err != nil {
-		return fmt.Errorf("persisting PDF storage path: %w", err)
+		// Status is already PENDING_PROVIDER (set by ClaimForSigning CAS).
+		// Persist the PDF storage path as a durable checkpoint for the background worker.
+		if err := s.documentRepo.Update(ctx, doc); err != nil {
+			return fmt.Errorf("persisting PDF storage path: %w", err)
+		}
 	}
 
 	return s.uploadToProvider(ctx, doc, recipients, signerRoles, portableDoc, renderResult)

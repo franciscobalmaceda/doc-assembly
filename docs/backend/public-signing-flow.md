@@ -8,6 +8,7 @@ This document describes the complete flow for public document signing, from docu
 - [Architecture](#architecture)
 - [Flow 1: Document Creation](#flow-1-document-creation)
 - [Flow 2: Email Verification Gate](#flow-2-email-verification-gate)
+- [Flow 2B: Authenticated Signing Session (Iframe)](#flow-2b-authenticated-signing-session-iframe)
 - [Flow 3: Token-Based Signing](#flow-3-token-based-signing)
 - [Flow 4: Admin Token Invalidation](#flow-4-admin-token-invalidation)
 - [Endpoints Reference](#endpoints-reference)
@@ -19,6 +20,11 @@ This document describes the complete flow for public document signing, from docu
 ## Overview
 
 Documents use a **single shared public URL** per document instead of per-recipient signing URLs. Recipients visit the public URL, verify their email, receive a token-based signing link, and proceed through the signing flow.
+
+There are now two strictly separated entry flows:
+
+- Public flow (`/public/doc/{documentId}`): email verification gate, anonymous-safe anti-enumeration semantics.
+- Authenticated iframe flow (`POST /api/v1/signing-sessions/{documentId}`): bearer-authenticated session bootstrap for CRM embeds, no email sending.
 
 Optionally, a custom public-access middleware can validate an already-authenticated user (domain/JWT/etc.) and bypass the email gate by issuing a standard `/public/sign/{token}` redirect.
 
@@ -201,6 +207,35 @@ sequenceDiagram
 
 ---
 
+## Flow 2B: Authenticated Signing Session (Iframe)
+
+This flow is used by authenticated CRM embeds and does not call `POST /public/doc/{id}/request-access`.
+
+```mermaid
+sequenceDiagram
+    participant Front as applications-front
+    participant API as SigningSessionController
+    participant Auth as OIDC or Custom Authenticator
+    participant Svc as SigningSessionService
+    participant Public as PreSigningService
+
+    Front->>API: POST /api/v1/signing-sessions/{documentId} + Bearer
+    API->>Auth: validate JWT/custom claims
+    Auth-->>API: {email, subject, provider}
+    API->>Svc: CreateOrGetSession(documentId, principal)
+    Svc->>Svc: Resolve recipient by email/subject
+    Svc->>Svc: Get-or-create reusable token (no email send)
+    Svc->>Public: GetPublicSigningPage(token)
+    Public-->>Svc: {step, canSign, canDownload, downloadUrl}
+    Svc-->>API: {sessionUrl: /public/sign/{token}, ...}
+    API-->>Front: 200 response
+    Front->>Front: Load sessionUrl in iframe
+```
+
+The returned `sessionUrl` always points to `/public/sign/{token}`. That page remains the single UX for sign, view, waiting, and download states.
+
+---
+
 ## Flow 3: Token-Based Signing
 
 After receiving the token URL via email, the recipient accesses the signing page. The flow depends on the token type.
@@ -360,6 +395,7 @@ After invalidation, the recipient can still access `/public/doc/{documentID}` an
 
 | Method | Path | Role | Purpose |
 |--------|------|------|---------|
+| `POST` | `/api/v1/signing-sessions/{documentId}` | Authenticated user | Create/reuse iframe signing session and return `/public/sign/{token}` URL |
 | `POST` | `/api/v1/documents` | Operator | Create document + send notifications |
 | `POST` | `/api/v1/documents/{id}/invalidate-tokens` | Operator | Invalidate all active tokens |
 
@@ -402,6 +438,12 @@ public_access:
   rate_limit_max: 3            # Max token requests per window
   rate_limit_window_min: 60    # Rate limit window (minutes)
   token_ttl_hours: 48          # Token expiration (hours)
+
+signing_session_auth:
+  mode: oidc                   # required: "oidc" or "custom"
+  oidc:
+    provider: panel            # "panel" or provider name (if configured)
+    email_claim: email         # claim used to resolve recipient
 ```
 
 Environment variable overrides:
@@ -411,3 +453,6 @@ Environment variable overrides:
 | `DOC_ENGINE_PUBLIC_ACCESS_RATE_LIMIT_MAX` | Max token requests per window |
 | `DOC_ENGINE_PUBLIC_ACCESS_RATE_LIMIT_WINDOW_MIN` | Rate limit window in minutes |
 | `DOC_ENGINE_PUBLIC_ACCESS_TOKEN_TTL_HOURS` | Token TTL in hours |
+| `DOC_ENGINE_SIGNING_SESSION_AUTH_MODE` | Auth mode for `/api/v1/signing-sessions/{id}` (`oidc` or `custom`) |
+| `DOC_ENGINE_SIGNING_SESSION_AUTH_OIDC_PROVIDER` | OIDC provider name for signing session auth |
+| `DOC_ENGINE_SIGNING_SESSION_AUTH_OIDC_EMAIL_CLAIM` | Email claim key for recipient resolution |

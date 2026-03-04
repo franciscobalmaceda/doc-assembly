@@ -207,13 +207,14 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 		30, // expirationDays
 		docAccessTokenRepo,
 		docFieldResponseRepo,
+		true,
 	)
 
 	// Pre-signing service
 	preSigningService := documentsvc.NewPreSigningService(
 		docAccessTokenRepo, docFieldResponseRepo,
 		docRepo, docRecipientRepo, templateVersionRepo, templateVersionSignerRoleRepo,
-		mockPDFRenderer, mockSigningAdapter, storageAdapter, eventEmitter,
+		mockPDFRenderer, mockSigningAdapter, storageAdapter, true, eventEmitter,
 		testPublicURL,
 	)
 

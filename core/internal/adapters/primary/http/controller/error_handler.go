@@ -51,6 +51,7 @@ var conflictErrors = []error{
 	entity.ErrDocumentTypeCodeExists,
 	entity.ErrDocumentTypeAlreadyAssigned,
 	entity.ErrProcessCodeExists,
+	entity.ErrInvalidDocumentState,
 }
 
 var badRequestErrors = []error{
@@ -115,6 +116,10 @@ var unauthorizedErrors = []error{
 	entity.ErrInvalidAPIKey,
 }
 
+var tooManyRequestErrors = []error{
+	entity.ErrTooManyRequests,
+}
+
 var unavailableErrors = []error{
 	entity.ErrLLMServiceUnavailable,
 	entity.ErrRendererBusy,
@@ -176,6 +181,8 @@ func mapErrorToStatusCode(err error) int {
 		return http.StatusForbidden
 	case is401Error(err):
 		return http.StatusUnauthorized
+	case is429Error(err):
+		return http.StatusTooManyRequests
 	case is503Error(err):
 		return http.StatusServiceUnavailable
 	default:
@@ -210,6 +217,11 @@ func is403Error(err error) bool {
 // is401Error returns true if the error should result in a 401 Unauthorized response.
 func is401Error(err error) bool {
 	return isAnyError(err, unauthorizedErrors...)
+}
+
+// is429Error returns true if the error should result in a 429 Too Many Requests response.
+func is429Error(err error) bool {
+	return isAnyError(err, tooManyRequestErrors...)
 }
 
 // is503Error returns true if the error should result in a 503 Service Unavailable response.

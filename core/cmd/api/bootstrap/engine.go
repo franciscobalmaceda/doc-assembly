@@ -33,6 +33,8 @@ type Engine struct {
 	initFunc           port.InitFunc
 	workspaceProvider  port.WorkspaceInjectableProvider
 	publicDocAuth      port.PublicDocumentAccessAuthenticator
+	signingSessionAuth port.SigningSessionAuthenticator
+	signingSessionMode string
 	designTokens       *pdfrenderer.TypstDesignTokens
 	frontendFS         fs.FS // Embedded SPA filesystem; nil = no frontend served
 	frontendOverridden bool  // True if SetFrontendFS was called (even with nil)
@@ -146,6 +148,26 @@ func (e *Engine) SetPublicDocumentAccessAuthenticator(auth port.PublicDocumentAc
 // authenticator, or nil if not set.
 func (e *Engine) GetPublicDocumentAccessAuthenticator() port.PublicDocumentAccessAuthenticator {
 	return e.publicDocAuth
+}
+
+// SetSigningSessionAuthenticator sets custom authentication for
+// /api/v1/signing-sessions/:documentId when mode is "custom".
+func (e *Engine) SetSigningSessionAuthenticator(auth port.SigningSessionAuthenticator) *Engine {
+	e.signingSessionAuth = auth
+	return e
+}
+
+// GetSigningSessionAuthenticator returns the registered signing session
+// authenticator, or nil if not set.
+func (e *Engine) GetSigningSessionAuthenticator() port.SigningSessionAuthenticator {
+	return e.signingSessionAuth
+}
+
+// SetSigningSessionAuthMode overrides signing session auth mode configured via
+// settings/app.yaml (signing_session_auth.mode).
+func (e *Engine) SetSigningSessionAuthMode(mode string) *Engine {
+	e.signingSessionMode = strings.TrimSpace(mode)
+	return e
 }
 
 // SetFrontendFS overrides the embedded frontend filesystem.
