@@ -38,6 +38,7 @@ import {
   ChevronRight,
   MoreHorizontal,
   Paintbrush,
+  PanelTop,
 } from 'lucide-react'
 import {
   Tooltip,
@@ -51,6 +52,7 @@ import { FontFamilyPicker } from './FontFamilyPicker'
 import { FontSizePicker } from './FontSizePicker'
 import { useOverflowScroll } from '@/hooks/use-overflow-scroll'
 import { cn } from '@/lib/utils'
+import { useDocumentHeaderStore } from '../stores/document-header-store'
 
 interface EditorToolbarProps {
   editor: Editor | null
@@ -58,10 +60,13 @@ interface EditorToolbarProps {
   onImport?: () => void
   templateId?: string
   versionId?: string
+  /** Hide document-specific block buttons (image, signature, table, etc.) when editing header text */
+  showSpecialBlocks?: boolean
 }
 
-export function EditorToolbar({ editor, onExport, onImport, templateId, versionId }: EditorToolbarProps) {
+export function EditorToolbar({ editor, onExport, onImport, templateId, versionId, showSpecialBlocks = true }: EditorToolbarProps) {
   const { t } = useTranslation()
+  const { enabled: headerEnabled, setEnabled: setHeaderEnabled } = useDocumentHeaderStore()
   // Force re-render when editor state changes (for undo/redo buttons)
   const [, forceUpdate] = useState({})
 
@@ -271,43 +276,54 @@ export function EditorToolbar({ editor, onExport, onImport, templateId, versionI
           <Separator orientation="vertical" className="h-6 mx-1" />
 
           {/* Document elements - Special tools section */}
-          <div className="relative flex items-center gap-1 px-2 py-1 bg-muted/60 dark:bg-muted/40 rounded-lg border border-border">
-            {/* Floating label */}
-            <span className="absolute -top-2 left-2 px-1.5 text-[10px] font-medium tracking-wide uppercase text-muted-foreground bg-card rounded">
-              {t('editor.toolbar.blocks')}
-            </span>
+          {showSpecialBlocks && (
+            <>
+              <div className="relative flex items-center gap-1 px-2 py-1 bg-muted/60 dark:bg-muted/40 rounded-lg border border-border">
+                {/* Floating label */}
+                <span className="absolute -top-2 left-2 px-1.5 text-[10px] font-medium tracking-wide uppercase text-muted-foreground bg-card rounded">
+                  {t('editor.toolbar.blocks')}
+                </span>
 
-            <ToolbarButton
-              onClick={() => {
-                editor.view.dom.dispatchEvent(
-                  new CustomEvent('editor:open-image-modal', { bubbles: true })
-                )
-              }}
-              tooltip={t('editor.toolbar.insertImage')}
-            >
-              <ImageIcon className="h-4 w-4 text-success-foreground dark:text-success" />
-            </ToolbarButton>
-            <ToolbarButton
-              onClick={() => editor.chain().focus().setSignature().run()}
-              tooltip={t('editor.toolbar.signatureBlock')}
-            >
-              <PenLine className="h-4 w-4 text-info-foreground dark:text-info" />
-            </ToolbarButton>
-            <ToolbarButton
-              onClick={() => editor.chain().focus().setConditional({}).run()}
-              tooltip={t('editor.toolbar.conditionalBlock')}
-            >
-              <GitBranch className="h-4 w-4 text-warning-foreground dark:text-warning" />
-            </ToolbarButton>
-            <ToolbarButton
-              onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
-              tooltip={t('editor.insertTable')}
-            >
-              <Table2 className="h-4 w-4 text-primary" />
-            </ToolbarButton>
-          </div>
+                <ToolbarButton
+                  onClick={() => {
+                    editor.view.dom.dispatchEvent(
+                      new CustomEvent('editor:open-image-modal', { bubbles: true })
+                    )
+                  }}
+                  tooltip={t('editor.toolbar.insertImage')}
+                >
+                  <ImageIcon className="h-4 w-4 text-success-foreground dark:text-success" />
+                </ToolbarButton>
+                <ToolbarButton
+                  onClick={() => editor.chain().focus().setSignature().run()}
+                  tooltip={t('editor.toolbar.signatureBlock')}
+                >
+                  <PenLine className="h-4 w-4 text-info-foreground dark:text-info" />
+                </ToolbarButton>
+                <ToolbarButton
+                  onClick={() => editor.chain().focus().setConditional({}).run()}
+                  tooltip={t('editor.toolbar.conditionalBlock')}
+                >
+                  <GitBranch className="h-4 w-4 text-warning-foreground dark:text-warning" />
+                </ToolbarButton>
+                <ToolbarButton
+                  onClick={() => setHeaderEnabled(!headerEnabled)}
+                  isActive={headerEnabled}
+                  tooltip={headerEnabled ? t('editor.toolbar.removeHeader') : t('editor.toolbar.addHeader')}
+                >
+                  <PanelTop className="h-4 w-4" />
+                </ToolbarButton>
+                <ToolbarButton
+                  onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+                  tooltip={t('editor.insertTable')}
+                >
+                  <Table2 className="h-4 w-4 text-primary" />
+                </ToolbarButton>
+              </div>
 
-          <Separator orientation="vertical" className="h-6 mx-1" />
+              <Separator orientation="vertical" className="h-6 mx-1" />
+            </>
+          )}
 
           {/* Export/Import/Preview */}
           {(onExport || onImport || (templateId && versionId)) && (
@@ -535,34 +551,45 @@ export function EditorToolbar({ editor, onExport, onImport, templateId, versionI
                 <Minus className="mr-2 h-4 w-4" />
                 {t('editor.toolbar.horizontalRule')}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  editor.view.dom.dispatchEvent(
-                    new CustomEvent('editor:open-image-modal', { bubbles: true })
-                  )
-                }}
-              >
-                <ImageIcon className="mr-2 h-4 w-4 text-success-foreground dark:text-success" />
-                {t('editor.toolbar.insertImage')}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => editor.chain().focus().setSignature().run()}
-              >
-                <PenLine className="mr-2 h-4 w-4 text-info-foreground dark:text-info" />
-                {t('editor.toolbar.signatureBlock')}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => editor.chain().focus().setConditional({}).run()}
-              >
-                <GitBranch className="mr-2 h-4 w-4 text-warning-foreground dark:text-warning" />
-                {t('editor.toolbar.conditionalBlock')}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
-              >
-                <Table2 className="mr-2 h-4 w-4 text-primary" />
-                {t('editor.insertTable')}
-              </DropdownMenuItem>
+              {showSpecialBlocks && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      editor.view.dom.dispatchEvent(
+                        new CustomEvent('editor:open-image-modal', { bubbles: true })
+                      )
+                    }}
+                  >
+                    <ImageIcon className="mr-2 h-4 w-4 text-success-foreground dark:text-success" />
+                    {t('editor.toolbar.insertImage')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => editor.chain().focus().setSignature().run()}
+                  >
+                    <PenLine className="mr-2 h-4 w-4 text-info-foreground dark:text-info" />
+                    {t('editor.toolbar.signatureBlock')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => editor.chain().focus().setConditional({}).run()}
+                  >
+                    <GitBranch className="mr-2 h-4 w-4 text-warning-foreground dark:text-warning" />
+                    {t('editor.toolbar.conditionalBlock')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setHeaderEnabled(!headerEnabled)}
+                    className={cn(headerEnabled && 'bg-accent')}
+                  >
+                    <PanelTop className="mr-2 h-4 w-4" />
+                    {headerEnabled ? t('editor.toolbar.removeHeader') : t('editor.toolbar.addHeader')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+                  >
+                    <Table2 className="mr-2 h-4 w-4 text-primary" />
+                    {t('editor.insertTable')}
+                  </DropdownMenuItem>
+                </>
+              )}
 
               {/* Export/Import/Preview */}
               {(onExport || onImport || (templateId && versionId)) && (

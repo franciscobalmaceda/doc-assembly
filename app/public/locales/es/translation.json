@@ -491,6 +491,8 @@
       "insertImage": "Insertar imagen",
       "signatureBlock": "Bloque de firma",
       "conditionalBlock": "Bloque condicional",
+      "addHeader": "Agregar encabezado",
+      "removeHeader": "Quitar encabezado",
       "exportDocument": "Exportar documento (JSON)",
       "importDocument": "Importar documento (JSON)",
       "history": "Historial",
@@ -766,6 +768,13 @@
       },
       "activeCount": "{{count}} activos",
       "notConfigured": "No configurado"
+    },
+    "documentHeader": {
+      "addLogo": "Haz clic para agregar logo",
+      "textPlaceholder": "Agregar texto de encabezado...",
+      "layoutImageLeft": "Imagen izquierda, texto derecha",
+      "layoutImageCenter": "Imagen centrada",
+      "layoutImageRight": "Texto izquierda, imagen derecha"
     },
     "signature": {
       "title": "Firma",

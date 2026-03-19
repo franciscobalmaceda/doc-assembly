@@ -36,6 +36,7 @@ import { ListInjectorExtension } from '../extensions/ListInjector'
 import { InteractiveFieldExtension } from '../extensions/InteractiveField'
 import { StoredMarksPersistenceExtension } from '../extensions/StoredMarksPersistence'
 import { ImageInsertModal, type ImageInsertResult } from './ImageInsertModal'
+import { DocumentPageHeader } from './DocumentPageHeader'
 import { VariableFormatDialog } from './VariableFormatDialog'
 import { VariablesPanel } from './VariablesPanel'
 import { VariableDragOverlay } from './VariableDragOverlay'
@@ -44,7 +45,7 @@ import { TableBubbleMenu } from './TableBubbleMenu'
 import { TableCornerHandle } from './TableCornerHandle'
 import { hasConfigurableOptions } from '../types/injectable'
 import { type Variable } from '../types'
-import { usePaginationStore, useSignerRolesStore } from '../stores'
+import { usePaginationStore, useSignerRolesStore, useDocumentHeaderStore } from '../stores'
 import { useVariablesPanelStore } from '../stores/variables-panel-store'
 import type { VariableDragData } from '../types/drag'
 import { getInjectableVariableIds } from '../types/signer-roles'
@@ -86,6 +87,11 @@ export function DocumentEditor({
 }: DocumentEditorProps) {
   // Get page config from store (for visual width and margins)
   const { pageSize, margins } = usePaginationStore()
+  const headerEnabled = useDocumentHeaderStore((state) => state.enabled)
+
+  // Track which editor the toolbar should target (main or header text editor).
+  // null means "use the main editor". Set to a header editor instance when its text area is focused.
+  const [toolbarEditor, setToolbarEditor] = useState<Editor | null>(null)
   const isVariablesPanelCollapsed = useVariablesPanelStore((state) => state.isCollapsed)
   const isRolesPanelCollapsed = useSignerRolesStore((state) => state.isCollapsed)
   const roles = useSignerRolesStore((state) => state.roles)
@@ -186,6 +192,11 @@ export function DocumentEditor({
       contentRef.current = editor.getJSON()
       onContentChange?.(editor.getHTML())
     },
+    onFocus: ({ editor }) => {
+      setToolbarEditor(null) // null = use main editor (see toolbar render)
+      // Suppress unused variable lint (editor is passed by TipTap but we don't need it here)
+      void editor
+    },
     editorProps: {
       attributes: {
         class:
@@ -193,6 +204,9 @@ export function DocumentEditor({
       },
     },
   }, [editorKey]) // Recreate editor when editorKey changes
+
+  // True when the header text editor (not the main editor) is driving the toolbar
+  const isHeaderEditorActive = toolbarEditor !== null
 
   // Store editor reference for export/import
   useEffect(() => {
@@ -202,6 +216,19 @@ export function DocumentEditor({
     // Notify parent when editor is ready
     onEditorReady?.(editor ?? null)
   }, [editor, editorRef, onEditorReady])
+
+  // Default toolbar to main editor; reset when header is hidden
+  useEffect(() => {
+    if (!headerEnabled) setToolbarEditor(null)
+  }, [headerEnabled])
+
+  const handleHeaderEditorFocus = useCallback((headerEditor: Editor) => {
+    setToolbarEditor(headerEditor)
+  }, [])
+
+  const handleHeaderEditorBlur = useCallback(() => {
+    setToolbarEditor(null)
+  }, [])
 
   // Notify when editor is fully rendered and styles are applied
   useEffect(() => {
@@ -611,7 +638,8 @@ export function DocumentEditor({
             <div className="flex items-center justify-between border-b border-border bg-card min-w-0">
               {editable ? (
                 <EditorToolbar
-                  editor={editor}
+                  editor={toolbarEditor ?? editor}
+                  showSpecialBlocks={!isHeaderEditorActive}
                   onExport={onExport}
                   onImport={onImport}
                   templateId={templateId}
@@ -637,18 +665,30 @@ export function DocumentEditor({
               )}
 
               <div
-                className="mx-auto bg-muted shadow-lg"
+                className="mx-auto bg-muted shadow-lg overflow-hidden"
                 style={{
                   width: pageSize.width,
                   minHeight: pageSize.height,
-                  paddingTop: margins.top,
-                  paddingBottom: margins.bottom,
-                  paddingLeft: margins.left,
-                  paddingRight: margins.right,
                 }}
               >
-                <EditorContent editor={editor} />
-                {editable && <TableBubbleMenu editor={editor} />}
+                {headerEnabled && (
+                  <DocumentPageHeader
+                    editable={editable}
+                    onTextEditorFocus={handleHeaderEditorFocus}
+                    onTextEditorBlur={handleHeaderEditorBlur}
+                  />
+                )}
+                <div
+                  style={{
+                    paddingTop: margins.top,
+                    paddingBottom: margins.bottom,
+                    paddingLeft: margins.left,
+                    paddingRight: margins.right,
+                  }}
+                >
+                  <EditorContent editor={editor} />
+                  {editable && <TableBubbleMenu editor={editor} />}
+                </div>
               </div>
               {/* Table corner handle - positioned relative to scroll container */}
               {editable && <TableCornerHandle editor={editor} />}

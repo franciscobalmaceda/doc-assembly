@@ -66,6 +66,15 @@ export interface PortableDocument {
 
   /** Export metadata (auto-generated) */
   exportInfo: ExportInfo
+
+  /** Optional document header (letterhead) above page margins */
+  header?: {
+    enabled: boolean
+    layout?: 'image-left' | 'image-right' | 'image-center'
+    imageUrl?: string | null
+    imageAlt?: string
+    text?: string
+  }
 }
 
 // =============================================================================

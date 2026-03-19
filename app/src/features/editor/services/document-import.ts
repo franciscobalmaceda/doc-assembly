@@ -27,6 +27,7 @@ import { validateDocument, isVersionCompatible, compareVersions } from '../schem
 import { validateDocumentSemantics } from './document-validator'
 import { migrateDocument } from './document-migrations'
 import { PAGE_SIZES } from '../types'
+import { useDocumentHeaderStore } from '../stores/document-header-store'
 
 // =============================================================================
 // Types
@@ -361,6 +362,13 @@ export function importDocument(
 
   // Restore signing workflow configuration
   restoreWorkflowConfig(migratedDocument.signingWorkflow, storeActions)
+
+  // Restore header configuration
+  if (migratedDocument.header) {
+    useDocumentHeaderStore.getState().configure(migratedDocument.header)
+  } else {
+    useDocumentHeaderStore.getState().reset()
+  }
 
   return {
     success: true,

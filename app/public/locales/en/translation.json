@@ -491,6 +491,8 @@
       "insertImage": "Insert image",
       "signatureBlock": "Signature block",
       "conditionalBlock": "Conditional block",
+      "addHeader": "Add document header",
+      "removeHeader": "Remove document header",
       "exportDocument": "Export document (JSON)",
       "importDocument": "Import document (JSON)",
       "history": "History",
@@ -766,6 +768,13 @@
       },
       "activeCount": "{{count}} active",
       "notConfigured": "Not configured"
+    },
+    "documentHeader": {
+      "addLogo": "Click to add logo",
+      "textPlaceholder": "Add header text...",
+      "layoutImageLeft": "Image left, text right",
+      "layoutImageCenter": "Image centered",
+      "layoutImageRight": "Text left, image right"
     },
     "signature": {
       "title": "Signature",

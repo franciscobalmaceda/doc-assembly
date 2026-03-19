@@ -22,6 +22,7 @@ import type {
   SigningWorkflowConfig,
 } from '../types/document-format'
 import type { PaginationStore } from '../stores/pagination-store'
+import { useDocumentHeaderStore } from '../stores/document-header-store'
 import { DOCUMENT_FORMAT_VERSION } from '../types/document-format'
 import { PAGE_SIZES } from '../types'
 
@@ -210,6 +211,9 @@ export function exportDocument(
   // Generate export info
   const exportInfo = generateExportInfo(options)
 
+  // Read header state
+  const headerState = useDocumentHeaderStore.getState()
+
   // Assemble the document
   const document: PortableDocument = {
     version: DOCUMENT_FORMAT_VERSION,
@@ -220,6 +224,13 @@ export function exportDocument(
     signingWorkflow: storeData.workflowConfig,
     content,
     exportInfo,
+    header: {
+      enabled: headerState.enabled,
+      layout: headerState.layout,
+      imageUrl: headerState.imageUrl,
+      imageAlt: headerState.imageAlt,
+      text: headerState.text,
+    },
   }
 
   // Add checksum if requested

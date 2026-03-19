@@ -329,6 +329,18 @@ export const ExportInfoSchema = z.object({
 })
 
 // =============================================================================
+// Document Header Schema
+// =============================================================================
+
+export const DocumentHeaderConfigSchema = z.object({
+  enabled: z.boolean(),
+  layout: z.enum(['image-left', 'image-right', 'image-center']).optional(),
+  imageUrl: z.string().nullable().optional(),
+  imageAlt: z.string().optional(),
+  text: z.string().optional(),
+})
+
+// =============================================================================
 // Complete Portable Document Schema
 // =============================================================================
 
@@ -345,6 +357,7 @@ export const PortableDocumentSchema = z.object({
     }),
   content: ProseMirrorDocumentSchema,
   exportInfo: ExportInfoSchema,
+  header: DocumentHeaderConfigSchema.optional(),
 })
 
 // =============================================================================
