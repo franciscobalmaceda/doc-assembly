@@ -129,81 +129,83 @@ export function SignatureItemView({
         </div>
       )}
 
-      {/* Imagen de firma (si existe) */}
-      {signature.imageData && (
-        <div
-          ref={containerRef}
-          className="mb-2 h-20 w-full flex items-end justify-center relative"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <img
-            ref={imageRef}
-            src={signature.imageData}
-            alt={t('editor.signature.title')}
-            className={cn(
-              'max-h-20 max-w-full object-contain',
-              editable && !isImageSelected && 'cursor-pointer',
-              editable && isImageSelected && 'cursor-move'
-            )}
-            style={imageStyles}
-            onClick={handleImageClick}
-          />
-
-          {/* Moveable controls - only when editable and selected */}
-          {editable && isImageSelected && imageElement && (
-            <Moveable
-              target={imageElement}
-              draggable={true}
-              rotatable={true}
-              scalable={true}
-              keepRatio={true}
-              throttleDrag={0}
-              throttleRotate={0}
-              throttleScale={0}
-              onDrag={({ target, translate }) => {
-                // Clamp position to keep center within container
-                const clamped = clampPosition(translate[0], translate[1])
-                const rotation = signature.imageRotation ?? 0
-                const scale = signature.imageScale ?? 1
-                target.style.transform = `translate(${clamped.x}px, ${clamped.y}px) rotate(${rotation}deg) scale(${scale})`
-              }}
-              onDragEnd={() => {
-                // Save last clamped position
-                if (onImageTransformChange) {
-                  onImageTransformChange({
-                    imageX: lastClampedPos.current.x,
-                    imageY: lastClampedPos.current.y,
-                  })
-                }
-              }}
-              onRotate={({ target, transform }) => {
-                target.style.transform = transform
-              }}
-              onRotateEnd={({ target }) => {
-                const style = target.style.transform
-                const rotateMatch = style.match(/rotate\(([^)]+)deg\)/)
-                if (rotateMatch && onImageTransformChange) {
-                  onImageTransformChange({
-                    imageRotation: parseFloat(rotateMatch[1]),
-                  })
-                }
-              }}
-              onScale={({ target, transform }) => {
-                target.style.transform = transform
-              }}
-              onScaleEnd={({ target }) => {
-                const style = target.style.transform
-                const scaleMatch = style.match(/scale\(([^)]+)\)/)
-                if (scaleMatch && onImageTransformChange) {
-                  onImageTransformChange({
-                    imageScale: parseFloat(scaleMatch[1]),
-                  })
-                }
-              }}
+      {/* Imagen de firma — always reserve slot height so lines stay aligned */}
+      <div
+        ref={containerRef}
+        className="mb-2 h-20 w-full flex items-end justify-center relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {signature.imageData && (
+          <>
+            <img
+              ref={imageRef}
+              src={signature.imageData}
+              alt={t('editor.signature.title')}
+              className={cn(
+                'max-h-20 max-w-full object-contain',
+                editable && !isImageSelected && 'cursor-pointer',
+                editable && isImageSelected && 'cursor-move'
+              )}
+              style={imageStyles}
+              onClick={handleImageClick}
             />
-          )}
-        </div>
-      )}
+
+            {/* Moveable controls - only when editable and selected */}
+            {editable && isImageSelected && imageElement && (
+              <Moveable
+                target={imageElement}
+                draggable={true}
+                rotatable={true}
+                scalable={true}
+                keepRatio={true}
+                throttleDrag={0}
+                throttleRotate={0}
+                throttleScale={0}
+                onDrag={({ target, translate }) => {
+                  // Clamp position to keep center within container
+                  const clamped = clampPosition(translate[0], translate[1])
+                  const rotation = signature.imageRotation ?? 0
+                  const scale = signature.imageScale ?? 1
+                  target.style.transform = `translate(${clamped.x}px, ${clamped.y}px) rotate(${rotation}deg) scale(${scale})`
+                }}
+                onDragEnd={() => {
+                  // Save last clamped position
+                  if (onImageTransformChange) {
+                    onImageTransformChange({
+                      imageX: lastClampedPos.current.x,
+                      imageY: lastClampedPos.current.y,
+                    })
+                  }
+                }}
+                onRotate={({ target, transform }) => {
+                  target.style.transform = transform
+                }}
+                onRotateEnd={({ target }) => {
+                  const style = target.style.transform
+                  const rotateMatch = style.match(/rotate\(([^)]+)deg\)/)
+                  if (rotateMatch && onImageTransformChange) {
+                    onImageTransformChange({
+                      imageRotation: parseFloat(rotateMatch[1]),
+                    })
+                  }
+                }}
+                onScale={({ target, transform }) => {
+                  target.style.transform = transform
+                }}
+                onScaleEnd={({ target }) => {
+                  const style = target.style.transform
+                  const scaleMatch = style.match(/scale\(([^)]+)\)/)
+                  if (scaleMatch && onImageTransformChange) {
+                    onImageTransformChange({
+                      imageScale: parseFloat(scaleMatch[1]),
+                    })
+                  }
+                }}
+              />
+            )}
+          </>
+        )}
+      </div>
 
       {/* Línea de firma */}
       <div className={cn('h-px bg-foreground', lineWidthClasses)} />
