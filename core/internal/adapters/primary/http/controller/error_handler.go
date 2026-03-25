@@ -12,6 +12,7 @@ import (
 )
 
 var notFoundErrors = []error{
+	entity.ErrGalleryAssetNotFound,
 	entity.ErrInjectableNotFound,
 	entity.ErrTemplateNotFound,
 	entity.ErrTagNotFound,
@@ -55,6 +56,8 @@ var conflictErrors = []error{
 }
 
 var badRequestErrors = []error{
+	entity.ErrGalleryInvalidContentType,
+	entity.ErrGalleryFileTooLarge,
 	entity.ErrInjectableInUse,
 	entity.ErrNoPublishedVersion,
 	entity.ErrInvalidInjectableKey,

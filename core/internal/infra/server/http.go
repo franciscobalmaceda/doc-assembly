@@ -84,6 +84,7 @@ func NewHTTPServer(
 	signingSessionController *controller.SigningSessionController,
 	automationKeyController *controller.AutomationKeyController,
 	automationController *controller.AutomationController,
+	galleryController *controller.GalleryController,
 	publicDocAuthenticator port.PublicDocumentAccessAuthenticator,
 	signingSessionAuthenticator port.SigningSessionAuthenticator,
 	keyRepo port.AutomationAPIKeyRepository,
@@ -128,7 +129,7 @@ func NewHTTPServer(
 	v1 := setupPanelRoutes(base, cfg, middlewareProvider, requestTimeout)
 	registerPanelControllers(v1, middlewareProvider, adminController, meController,
 		tenantController, documentTypeController, processController, workspaceController,
-		injectableController, templateController, documentController)
+		injectableController, templateController, documentController, galleryController)
 	automationKeyController.RegisterRoutes(v1)
 	registerSigningSessionRoutes(base, cfg, requestTimeout, signingSessionController, signingSessionAuthenticator)
 
@@ -272,6 +273,7 @@ func registerPanelControllers(
 	injectableController *controller.ContentInjectableController,
 	templateController *controller.ContentTemplateController,
 	documentController *controller.DocumentController,
+	galleryController *controller.GalleryController,
 ) {
 	v1.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "pong"})
@@ -289,6 +291,8 @@ func registerPanelControllers(
 	// Document routes (within workspace context)
 	wsGroup := v1.Group("", middlewareProvider.WorkspaceContext())
 	documentController.RegisterRoutes(wsGroup)
+
+	galleryController.RegisterRoutes(v1, middlewareProvider)
 }
 
 // Start starts the HTTP server.
@@ -364,10 +368,15 @@ func clientConfigHandler(cfg *config.Config) gin.HandlerFunc {
 		ClientID           string `json:"clientId,omitempty"`
 	}
 
+	type features struct {
+		Gallery bool `json:"gallery"`
+	}
+
 	type clientConfig struct {
 		DummyAuth     bool          `json:"dummyAuth"`
 		BasePath      string        `json:"basePath"`
 		PanelProvider *providerInfo `json:"panelProvider,omitempty"`
+		Features      features      `json:"features"`
 	}
 
 	var panelProvider *providerInfo
@@ -386,6 +395,9 @@ func clientConfigHandler(cfg *config.Config) gin.HandlerFunc {
 		DummyAuth:     cfg.Auth.IsDummyAuth(),
 		BasePath:      cfg.Server.NormalizedBasePath(),
 		PanelProvider: panelProvider,
+		Features: features{
+			Gallery: true,
+		},
 	}
 
 	return func(c *gin.Context) {

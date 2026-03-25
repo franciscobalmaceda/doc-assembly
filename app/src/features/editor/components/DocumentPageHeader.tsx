@@ -1,13 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { galleryApi } from '../api/gallery-api'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { TextStyle, FontFamily, FontSize } from '@tiptap/extension-text-style'
 import { Color } from '@tiptap/extension-color'
 import TextAlign from '@tiptap/extension-text-align'
-import { ImageIcon, X, PanelLeft, PanelRight, LayoutTemplate } from 'lucide-react'
+import { ImageIcon, X, PanelLeft, PanelRight, LayoutTemplate, Trash2 } from 'lucide-react'
 import type { Editor } from '@tiptap/core'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { ImageInsertModal, type ImageInsertResult } from './ImageInsertModal'
 import { useDocumentHeaderStore, type DocumentHeaderLayout } from '../stores/document-header-store'
 import { StoredMarksPersistenceExtension } from '../extensions/StoredMarksPersistence'
@@ -85,7 +93,7 @@ function ImageSlot({ imageUrl, imageAlt, editable, onOpenModal, onRemove, classN
 }
 
 // =============================================================================
-// Layout picker
+// Layout constants (reused in the toolbar)
 // =============================================================================
 
 const LAYOUTS: { value: DocumentHeaderLayout; icon: typeof PanelLeft; labelKey: string }[] = [
@@ -93,31 +101,6 @@ const LAYOUTS: { value: DocumentHeaderLayout; icon: typeof PanelLeft; labelKey: 
   { value: 'image-center', icon: LayoutTemplate, labelKey: 'editor.documentHeader.layoutImageCenter' },
   { value: 'image-right',  icon: PanelRight,     labelKey: 'editor.documentHeader.layoutImageRight' },
 ]
-
-function LayoutPicker({ current, onChange }: { current: DocumentHeaderLayout; onChange: (l: DocumentHeaderLayout) => void }) {
-  const { t } = useTranslation()
-  return (
-    <div className="flex items-center gap-0.5 rounded border border-border bg-background/80 p-0.5">
-      {LAYOUTS.map(({ value, icon: Icon, labelKey }) => (
-        <button
-          key={value}
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onChange(value)}
-          title={t(labelKey)}
-          className={cn(
-            'rounded p-1 transition-colors',
-            current === value
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-          )}
-        >
-          <Icon className="h-3 w-3" />
-        </button>
-      ))}
-    </div>
-  )
-}
 
 // =============================================================================
 // Main component
@@ -129,6 +112,43 @@ export function DocumentPageHeader({ editable, onTextEditorFocus, onTextEditorBl
     useDocumentHeaderStore()
 
   const [imageModalOpen, setImageModalOpen] = useState(false)
+
+  // Show the floating toolbar when hovering the header OR when the text editor is focused.
+  const [isHovered, setIsHovered] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
+  const showToolbar = editable && (isHovered || isFocused)
+  // Small delay on mouse-leave prevents the toolbar from vanishing while moving
+  // from the header content up to the toolbar buttons.
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleMouseEnter = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+    setIsHovered(true)
+  }
+  const handleMouseLeave = () => {
+    hoverTimerRef.current = setTimeout(() => setIsHovered(false), 150)
+  }
+
+  // Resolve storage:// gallery URLs to displayable URLs (blob or presigned).
+  const [resolvedImageUrl, setResolvedImageUrl] = useState<string>(
+    imageUrl?.startsWith('storage://') ? '' : (imageUrl ?? '')
+  )
+  useEffect(() => {
+    if (!imageUrl?.startsWith('storage://')) {
+      setResolvedImageUrl(imageUrl ?? '')
+      return
+    }
+    let blobURL = ''
+    const key = imageUrl.slice('storage://'.length)
+    galleryApi.getSrc(key).then((url) => {
+      if (url.startsWith('blob:')) blobURL = url
+      setResolvedImageUrl(url)
+    }).catch(() => {
+      setResolvedImageUrl('')
+    })
+    return () => {
+      if (blobURL) URL.revokeObjectURL(blobURL)
+    }
+  }, [imageUrl])
 
   // Track the last content we set from the store so we don't re-apply on our own updates
   const lastExternalContent = useRef<string>(JSON.stringify(storeContent))
@@ -156,9 +176,11 @@ export function DocumentPageHeader({ editable, onTextEditorFocus, onTextEditorBl
       setContent(json)
     },
     onFocus: ({ editor }) => {
+      setIsFocused(true)
       onTextEditorFocus?.(editor)
     },
     onBlur: () => {
+      setIsFocused(false)
       onTextEditorBlur?.()
     },
     editorProps: {
@@ -192,7 +214,7 @@ export function DocumentPageHeader({ editable, onTextEditorFocus, onTextEditorBl
 
   const imageSlot = (
     <ImageSlot
-      imageUrl={imageUrl}
+      imageUrl={resolvedImageUrl}
       imageAlt={imageAlt}
       editable={editable}
       onOpenModal={() => setImageModalOpen(true)}
@@ -210,27 +232,56 @@ export function DocumentPageHeader({ editable, onTextEditorFocus, onTextEditorBl
 
   return (
     <>
-      <div className="relative">
-        {/* Controls row */}
-        {editable && (
-          <div className="absolute top-1 right-1 z-10 flex items-center gap-1">
-            <LayoutPicker current={layout} onChange={setLayout} />
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setEnabled(false)}
-              className="rounded-full bg-background/80 p-0.5 text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
-              title={t('editor.toolbar.removeHeader')}
-            >
-              <X className="h-3 w-3" />
-            </button>
+      <div
+        className="relative"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {/* Floating block toolbar — visible on hover or when header text editor is focused */}
+        {showToolbar && (
+          <div className="absolute top-1 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-background border rounded-lg shadow-lg p-1 z-50">
+            <TooltipProvider delayDuration={300}>
+              {LAYOUTS.map(({ value, icon: Icon, labelKey }) => (
+                <Tooltip key={value}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn('h-8 w-8', layout === value && 'bg-accent')}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => setLayout(value)}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top"><p>{t(labelKey)}</p></TooltipContent>
+                </Tooltip>
+              ))}
+
+              <div className="w-px h-6 bg-border mx-1" />
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setEnabled(false)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top"><p>{t('editor.toolbar.removeHeader')}</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         )}
 
         {layout === 'image-left' && (
           <div className="flex">
             <ImageSlot
-              imageUrl={imageUrl}
+              imageUrl={resolvedImageUrl}
               imageAlt={imageAlt}
               editable={editable}
               onOpenModal={() => setImageModalOpen(true)}
@@ -245,7 +296,7 @@ export function DocumentPageHeader({ editable, onTextEditorFocus, onTextEditorBl
           <div className="flex">
             {textSlot}
             <ImageSlot
-              imageUrl={imageUrl}
+              imageUrl={resolvedImageUrl}
               imageAlt={imageAlt}
               editable={editable}
               onOpenModal={() => setImageModalOpen(true)}

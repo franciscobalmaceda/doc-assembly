@@ -2,6 +2,7 @@ package pdfrenderer
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -34,10 +35,13 @@ type Service struct {
 	imageCache       *ImageCache
 	converterFactory ConverterFactory
 	tokens           TypstDesignTokens
+	storageAdapter   port.StorageAdapter
 }
 
 // NewService creates a new Typst-based PDF renderer service.
-func NewService(opts TypstOptions, imageCache *ImageCache, factory ConverterFactory, tokens TypstDesignTokens) (*Service, error) {
+// storageAdapter is optional (may be nil); when provided, storage:// image URLs in documents
+// are resolved directly from storage rather than failing during PDF rendering.
+func NewService(opts TypstOptions, imageCache *ImageCache, factory ConverterFactory, tokens TypstDesignTokens, storageAdapter port.StorageAdapter) (*Service, error) {
 	typst, err := NewTypstRenderer(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create typst renderer: %w", err)
@@ -52,6 +56,7 @@ func NewService(opts TypstOptions, imageCache *ImageCache, factory ConverterFact
 		imageCache:       imageCache,
 		converterFactory: factory,
 		tokens:           tokens,
+		storageAdapter:   storageAdapter,
 	}
 
 	if opts.MaxConcurrent > 0 {
@@ -102,6 +107,7 @@ func (s *Service) RenderPreview(ctx context.Context, req *port.RenderPreviewRequ
 
 	// Resolve remote images
 	remoteImages := builder.RemoteImages()
+	remoteImages = s.resolveStorageEntries(ctx, remoteImages)
 	rootDir, renames, cleanup, err := s.resolveRemoteImages(ctx, remoteImages)
 	if err != nil {
 		return nil, err
@@ -133,6 +139,37 @@ func (s *Service) RenderPreview(ctx context.Context, req *port.RenderPreviewRequ
 		PageCount:       pageCount,
 		SignatureFields: signatureFields,
 	}, nil
+}
+
+// resolveStorageEntries converts storage:// entries in the images map to data: URIs
+// by downloading bytes directly from the storage adapter. Non-storage entries pass through.
+// images is url -> localFilename (same layout as typstConverter.remoteImages).
+func (s *Service) resolveStorageEntries(ctx context.Context, images map[string]string) map[string]string {
+	if s.storageAdapter == nil || len(images) == 0 {
+		return images
+	}
+	out := make(map[string]string, len(images))
+	for rawURL, filename := range images {
+		if !strings.HasPrefix(rawURL, "storage://") {
+			out[rawURL] = filename
+			continue
+		}
+		key := strings.TrimPrefix(rawURL, "storage://")
+		data, err := s.storageAdapter.Download(ctx, &port.StorageRequest{
+			Key:         key,
+			Environment: entity.EnvironmentProd,
+		})
+		if err != nil {
+			slog.WarnContext(ctx, "gallery image not found for PDF render",
+				slog.String("key", key),
+				slog.String("error", err.Error()),
+			)
+			continue
+		}
+		ct := http.DetectContentType(data)
+		out["data:"+ct+";base64,"+base64.StdEncoding.EncodeToString(data)] = filename
+	}
+	return out
 }
 
 // resolveRemoteImages handles image resolution via cache or direct download.

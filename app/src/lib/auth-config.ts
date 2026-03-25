@@ -18,6 +18,9 @@ export interface PanelProvider {
 export interface AuthConfig {
   dummyAuth: boolean
   panelProvider?: PanelProvider
+  features?: {
+    gallery?: boolean
+  }
 }
 
 let cachedConfig: AuthConfig | null = null

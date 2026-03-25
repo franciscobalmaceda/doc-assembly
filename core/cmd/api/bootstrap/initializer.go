@@ -14,6 +14,7 @@ import (
 	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
 	"github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres"
 	automationapikeyrepo "github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/automation_api_key_repo"
+	galleryassetrepo "github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/gallery_asset_repo"
 	automationauditlogrepo "github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/automation_audit_log_repo"
 	documentaccesstokenrepo "github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/document_access_token_repo"
 	documenteventrepo "github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/document_event_repo"
@@ -48,6 +49,7 @@ import (
 	s3storage "github.com/rendis/doc-assembly/core/internal/adapters/secondary/storage/s3"
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 	accesssvc "github.com/rendis/doc-assembly/core/internal/core/service/access"
+	gallerysvc "github.com/rendis/doc-assembly/core/internal/core/service/gallery"
 	catalogsvc "github.com/rendis/doc-assembly/core/internal/core/service/catalog"
 	documentsvc "github.com/rendis/doc-assembly/core/internal/core/service/document"
 	injectablesvc "github.com/rendis/doc-assembly/core/internal/core/service/injectable"
@@ -191,8 +193,14 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		templateRepo, templateTagRepo, contentValidator, workspaceRepo,
 	)
 
+	// --- Storage Adapter ---
+	storageAdapter, err := e.resolveStorageAdapter(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	// --- PDF Renderer ---
-	pdfRenderer, err := buildPDFRenderer(cfg, e.designTokens)
+	pdfRenderer, err := buildPDFRenderer(cfg, e.designTokens, storageAdapter)
 	if err != nil {
 		return nil, err
 	}
@@ -203,11 +211,10 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		return nil, err
 	}
 
-	// --- Storage Adapter ---
-	storageAdapter, err := e.resolveStorageAdapter(cfg)
-	if err != nil {
-		return nil, err
-	}
+	// --- Gallery ---
+	galleryAssetRepo := galleryassetrepo.New(pool)
+	gallerySvc := gallerysvc.New(storageAdapter, galleryAssetRepo, cfg.Server.PublicURL)
+	galleryCtrl := controller.NewGalleryController(gallerySvc, storageAdapter)
 
 	// --- Notification Provider ---
 	notificationProvider := e.resolveNotificationProvider(cfg)
@@ -357,6 +364,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		signingSessionCtrl,
 		automationKeyCtrl,
 		automationCtrl,
+		galleryCtrl,
 		publicDocAuth,
 		e.signingSessionAuth,
 		automationAPIKeyRepo,
@@ -377,7 +385,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 }
 
 // buildPDFRenderer creates the Typst-based PDF renderer service.
-func buildPDFRenderer(cfg *config.Config, customTokens *pdfrenderer.TypstDesignTokens) (port.PDFRenderer, error) {
+func buildPDFRenderer(cfg *config.Config, customTokens *pdfrenderer.TypstDesignTokens, storageAdapter port.StorageAdapter) (port.PDFRenderer, error) {
 	typstCfg := &cfg.Typst
 	opts := pdfrenderer.TypstOptions{
 		BinPath:        typstCfg.BinPath,
@@ -406,7 +414,7 @@ func buildPDFRenderer(cfg *config.Config, customTokens *pdfrenderer.TypstDesignT
 	}
 
 	factory := pdfrenderer.NewTypstConverterFactory(tokens)
-	return pdfrenderer.NewService(opts, imageCache, factory, tokens)
+	return pdfrenderer.NewService(opts, imageCache, factory, tokens, storageAdapter)
 }
 
 // resolveSigningProvider returns the engine override or auto-selects from config.

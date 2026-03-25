@@ -504,7 +504,7 @@ func (c *typstConverter) resolveImagePath(attrs map[string]any) string {
 		return ""
 	}
 
-	if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") || strings.HasPrefix(src, "data:") {
+	if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") || strings.HasPrefix(src, "data:") || strings.HasPrefix(src, "storage://") {
 		return c.RegisterRemoteImage(src)
 	}
 	return src
