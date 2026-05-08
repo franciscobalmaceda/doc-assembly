@@ -2,6 +2,7 @@ package documentrepo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -97,6 +98,37 @@ func scanDocumentRows(rows pgx.Rows) ([]*entity.Document, error) {
 		documents = append(documents, doc)
 	}
 	return documents, rows.Err()
+}
+
+func scanDocumentListItem(row pgx.Row) (*entity.DocumentListItem, error) {
+	item := &entity.DocumentListItem{}
+	var recipientsJSON []byte
+
+	if err := row.Scan(
+		&item.ID,
+		&item.WorkspaceID,
+		&item.TemplateVersionID,
+		&item.DocumentTypeID,
+		&item.DocumentTypeName,
+		&item.TemplateName,
+		&item.Title,
+		&item.ClientExternalReferenceID,
+		&item.SignerProvider,
+		&recipientsJSON,
+		&item.Status,
+		&item.CreatedAt,
+		&item.UpdatedAt,
+	); err != nil {
+		return nil, err
+	}
+
+	if len(recipientsJSON) > 0 {
+		if err := json.Unmarshal(recipientsJSON, &item.Recipients); err != nil {
+			return nil, fmt.Errorf("unmarshaling document recipients: %w", err)
+		}
+	}
+
+	return item, nil
 }
 
 // Create creates a new document.
@@ -242,7 +274,7 @@ func buildDocumentFilters(filters port.DocumentFilters, startArgPos int) (string
 // FindByWorkspace lists all documents in a workspace with optional filters.
 func (r *Repository) FindByWorkspace(ctx context.Context, workspaceID string, filters port.DocumentFilters) ([]*entity.DocumentListItem, error) {
 	querySuffix, filterArgs := buildDocumentFilters(filters, 2)
-	query := queryFindByWorkspaceBase + querySuffix
+	query := queryFindByWorkspaceBase + querySuffix + queryFindByWorkspaceProjection
 	args := append([]any{workspaceID}, filterArgs...)
 
 	rows, err := r.pool.Query(ctx, query, args...)
@@ -253,18 +285,8 @@ func (r *Repository) FindByWorkspace(ctx context.Context, workspaceID string, fi
 
 	var documents []*entity.DocumentListItem
 	for rows.Next() {
-		item := &entity.DocumentListItem{}
-		if err := rows.Scan(
-			&item.ID,
-			&item.WorkspaceID,
-			&item.TemplateVersionID,
-			&item.Title,
-			&item.ClientExternalReferenceID,
-			&item.SignerProvider,
-			&item.Status,
-			&item.CreatedAt,
-			&item.UpdatedAt,
-		); err != nil {
+		item, err := scanDocumentListItem(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scanning document: %w", err)
 		}
 		documents = append(documents, item)

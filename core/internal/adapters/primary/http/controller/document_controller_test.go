@@ -234,6 +234,26 @@ func TestDocumentController_ListDocuments(t *testing.T) {
 		var docs []*entity.DocumentListItem
 		require.NoError(t, json.Unmarshal(body, &docs))
 		assert.GreaterOrEqual(t, len(docs), 2)
+
+		var listedDoc *entity.DocumentListItem
+		for _, d := range docs {
+			if d.ID == doc1.ID {
+				listedDoc = d
+				break
+			}
+		}
+
+		require.NotNil(t, listedDoc)
+		assert.Equal(t, env.workspaceID, listedDoc.WorkspaceID)
+		assert.Equal(t, env.versionID, listedDoc.TemplateVersionID)
+		assert.NotEmpty(t, listedDoc.DocumentTypeID)
+		assert.Equal(t, "Test Document", *listedDoc.DocumentTypeName)
+		assert.Equal(t, "Test Doc Template", listedDoc.TemplateName)
+		require.NotNil(t, listedDoc.Title)
+		assert.Equal(t, "List Doc 1", *listedDoc.Title)
+		assert.Len(t, listedDoc.Recipients, 2)
+		assert.Equal(t, "alice@test.com", listedDoc.Recipients[0].Email)
+		assert.Equal(t, "bob@test.com", listedDoc.Recipients[1].Email)
 	})
 
 	t.Run("filter by status", func(t *testing.T) {

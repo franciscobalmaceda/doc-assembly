@@ -214,16 +214,22 @@ export function SigningListPage() {
                       )}
                     />
                   </th>
-                  <th className="w-[38%] border-b border-border py-4 pl-2 font-mono text-[10px] font-normal uppercase tracking-widest text-muted-foreground">
+                  <th className="w-[26%] border-b border-border py-4 pl-2 font-mono text-[10px] font-normal uppercase tracking-widest text-muted-foreground">
                     {t('signing.columns.title', 'Title')}
                   </th>
                   <th className="w-[20%] border-b border-border py-4 font-mono text-[10px] font-normal uppercase tracking-widest text-muted-foreground">
+                    {t('signing.columns.templateType', 'Template Type')}
+                  </th>
+                  <th className="w-[22%] border-b border-border py-4 font-mono text-[10px] font-normal uppercase tracking-widest text-muted-foreground">
+                    {t('signing.columns.signers', 'Signers')}
+                  </th>
+                  <th className="w-[14%] border-b border-border py-4 font-mono text-[10px] font-normal uppercase tracking-widest text-muted-foreground">
                     {t('signing.columns.status', 'Status')}
                   </th>
-                  <th className="w-[25%] border-b border-border py-4 font-mono text-[10px] font-normal uppercase tracking-widest text-muted-foreground">
+                  <th className="w-[12%] border-b border-border py-4 font-mono text-[10px] font-normal uppercase tracking-widest text-muted-foreground">
                     {t('signing.columns.created', 'Created')}
                   </th>
-                  <th className="w-[15%] border-b border-border py-4 pr-4 text-center font-mono text-[10px] font-normal uppercase tracking-widest text-muted-foreground">
+                  <th className="w-[6%] border-b border-border py-4 pr-4 text-center font-mono text-[10px] font-normal uppercase tracking-widest text-muted-foreground">
                     {t('signing.columns.actions', 'Actions')}
                   </th>
                 </tr>
