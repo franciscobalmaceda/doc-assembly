@@ -108,4 +108,48 @@ func TestRepository_FindByWorkspace_EnrichedFields(t *testing.T) {
 	assert.Equal(t, "Signer A", *got.Recipients[0].RoleName)
 	assert.Equal(t, "bob.repo@test.com", got.Recipients[1].Email)
 	assert.Equal(t, "Signer B", *got.Recipients[1].RoleName)
+
+	docTypeAlt := testhelper.CreateTestDocumentType(t, pool, tenantID, "REPO_ALT", "Alternate Type")
+	t.Cleanup(func() { testhelper.CleanupDocumentType(t, pool, docTypeAlt) })
+
+	_, err = pool.Exec(ctx, `UPDATE execution.documents SET document_type_id = $2 WHERE id = $1`, docID, docTypeAlt)
+	require.NoError(t, err)
+
+	byType, err := repo.FindByWorkspace(ctx, workspaceID, port.DocumentFilters{
+		DocumentTypeIDs: []string{docTypeAlt},
+		Limit:           10,
+		Offset:          0,
+	})
+	require.NoError(t, err)
+	var match *entity.DocumentListItem
+	for _, it := range byType {
+		if it.ID == docID {
+			match = it
+			break
+		}
+	}
+	require.NotNil(t, match)
+	assert.Equal(t, docTypeAlt, match.DocumentTypeID)
+
+	emptyType, err := repo.FindByWorkspace(ctx, workspaceID, port.DocumentFilters{
+		DocumentTypeIDs: []string{docTypeID},
+		Limit:           10,
+		Offset:          0,
+	})
+	require.NoError(t, err)
+	for _, it := range emptyType {
+		assert.NotEqual(t, docID, it.ID, "document no longer has original type id")
+	}
+
+	opts, err := repo.ListDistinctDocumentTypesForWorkspace(ctx, workspaceID)
+	require.NoError(t, err)
+	require.NotEmpty(t, opts)
+	foundAlt := false
+	for _, o := range opts {
+		if o.ID == docTypeAlt {
+			foundAlt = true
+			assert.Equal(t, "Alternate Type", o.Name)
+		}
+	}
+	assert.True(t, foundAlt)
 }

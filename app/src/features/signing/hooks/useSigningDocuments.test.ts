@@ -2,13 +2,20 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
-import { signingKeys, useDeprecateDocument, useSigningDocuments, useSigningDocument } from './useSigningDocuments'
+import {
+  signingKeys,
+  useDeprecateDocument,
+  useSigningDocuments,
+  useSigningDocument,
+  useSigningDocumentTypeOptions,
+} from './useSigningDocuments'
 import type { SigningDocumentListItem, SigningDocumentDetail } from '../types'
 
 // Mock the API module
 vi.mock('../api/signing-api', () => ({
   signingApi: {
     list: vi.fn(),
+    listDocumentTypeOptions: vi.fn(),
     getById: vi.fn(),
     create: vi.fn(),
     cancel: vi.fn(),
@@ -50,6 +57,10 @@ describe('signingKeys', () => {
     expect(signingKeys.statistics()).toEqual([
       'signing-documents',
       'statistics',
+    ])
+    expect(signingKeys.documentTypeOptions()).toEqual([
+      'signing-documents',
+      'document-type-options',
     ])
     expect(signingKeys.events('doc-1')).toEqual([
       'signing-documents',
@@ -99,6 +110,32 @@ describe('useSigningDocuments', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(signingApi.list).toHaveBeenCalledWith(filters)
+  })
+
+  it('includes documentTypeIds in query key', () => {
+    const filters = { documentTypeIds: ['a', 'b'] }
+    expect(signingKeys.list(filters)).toEqual([
+      'signing-documents',
+      'list',
+      filters,
+    ])
+  })
+})
+
+describe('useSigningDocumentTypeOptions', () => {
+  it('fetches document type options', async () => {
+    vi.mocked(signingApi.listDocumentTypeOptions).mockResolvedValueOnce([
+      { id: 'dt-1', name: 'NDA' },
+    ])
+
+    const { result } = renderHook(() => useSigningDocumentTypeOptions(), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toEqual([{ id: 'dt-1', name: 'NDA' }])
+    expect(signingApi.listDocumentTypeOptions).toHaveBeenCalledWith()
   })
 })
 

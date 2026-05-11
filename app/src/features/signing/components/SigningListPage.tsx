@@ -7,7 +7,10 @@ import { SigningListToolbar } from './SigningListToolbar'
 import { SigningDocumentRow } from './SigningDocumentRow'
 import { BulkActionsToolbar } from './BulkActionsToolbar'
 import { DeprecateDocumentDialog } from './DeprecateDocumentDialog'
-import { useSigningDocuments } from '../hooks/useSigningDocuments'
+import {
+  useSigningDocuments,
+  useSigningDocumentTypeOptions,
+} from '../hooks/useSigningDocuments'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { DocumentListFilters, SigningDocumentListItem } from '../types'
 
@@ -22,6 +25,11 @@ export function SigningListPage() {
 
   // Status multi-filter
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
+
+  // Document type (template type) multi-filter
+  const [selectedDocumentTypeIds, setSelectedDocumentTypeIds] = useState<
+    string[]
+  >([])
 
   // Row selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -43,14 +51,25 @@ export function SigningListPage() {
     setSelectedIds(new Set())
   }, [])
 
+  const handleDocumentTypesChange = useCallback((ids: string[]) => {
+    setSelectedDocumentTypeIds(ids)
+    setSelectedIds(new Set())
+  }, [])
+
+  const { data: documentTypeOptions = [] } = useSigningDocumentTypeOptions()
+
   // Build filters
   const filters: DocumentListFilters = useMemo(
     () => ({
       search: debouncedSearch || undefined,
       status:
         selectedStatuses.length > 0 ? selectedStatuses.join(',') : undefined,
+      documentTypeIds:
+        selectedDocumentTypeIds.length > 0
+          ? selectedDocumentTypeIds
+          : undefined,
     }),
-    [debouncedSearch, selectedStatuses],
+    [debouncedSearch, selectedStatuses, selectedDocumentTypeIds],
   )
 
   const { data: documents, isLoading, isError } = useSigningDocuments(filters)
@@ -137,6 +156,9 @@ export function SigningListPage() {
       <SigningListToolbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        documentTypeOptions={documentTypeOptions}
+        selectedDocumentTypeIds={selectedDocumentTypeIds}
+        onDocumentTypesChange={handleDocumentTypesChange}
         selectedStatuses={selectedStatuses}
         onStatusesChange={handleStatusesChange}
       />
@@ -179,11 +201,14 @@ export function SigningListPage() {
             <p className="text-lg text-muted-foreground">
               {t('signing.noDocuments', 'No signing documents found')}
             </p>
-            {(debouncedSearch || selectedStatuses.length > 0) && (
+            {(debouncedSearch ||
+              selectedStatuses.length > 0 ||
+              selectedDocumentTypeIds.length > 0) && (
               <button
                 onClick={() => {
                   setSearchQuery('')
                   setSelectedStatuses([])
+                  setSelectedDocumentTypeIds([])
                 }}
                 className="mt-4 text-sm text-foreground underline underline-offset-4 hover:no-underline"
               >

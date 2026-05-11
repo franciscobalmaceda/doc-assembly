@@ -308,6 +308,12 @@ type DocumentListRecipient struct {
 	SignerOrder           *int            `json:"signerOrder,omitempty"`
 }
 
+// DocumentTypeFilterOption is a distinct document type label for workspace filter UIs.
+type DocumentTypeFilterOption struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 // DocumentListItem represents a document in list views (without full details).
 type DocumentListItem struct {
 	ID                        string                  `json:"id"`

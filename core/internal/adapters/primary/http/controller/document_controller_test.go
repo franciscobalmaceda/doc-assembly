@@ -3,8 +3,10 @@
 package controller_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,6 +29,7 @@ type documentTestEnv struct {
 	signerRole2 string
 	operator    *testhelper.TestUser
 	viewer      *testhelper.TestUser
+	docTypeID   string
 }
 
 // setupDocumentEnv creates the full fixture stack needed for document tests:
@@ -82,6 +85,7 @@ func setupDocumentEnv(t *testing.T) *documentTestEnv {
 		signerRole2: signerRole2,
 		operator:    operator,
 		viewer:      viewer,
+		docTypeID:   docTypeID,
 	}
 }
 
@@ -121,7 +125,7 @@ func (env *documentTestEnv) createDocument(t *testing.T, title string) entity.Do
 
 func setDocumentStatusForDocumentController(t *testing.T, documentID string, status entity.DocumentStatus) {
 	t.Helper()
-	_, err := testhelper.GetTestPool(t).Exec(t.Context(), `UPDATE execution.documents SET status = $2 WHERE id = $1`, documentID, status)
+	_, err := testhelper.GetTestPool(t).Exec(context.Background(), `UPDATE execution.documents SET status = $2 WHERE id = $1`, documentID, status)
 	require.NoError(t, err)
 }
 
@@ -267,6 +271,36 @@ func TestDocumentController_ListDocuments(t *testing.T) {
 		}
 	})
 
+	t.Run("filter by multiple statuses", func(t *testing.T) {
+		setDocumentStatusForDocumentController(t, doc2.ID, entity.DocumentStatusReadyToSign)
+		t.Cleanup(func() {
+			setDocumentStatusForDocumentController(t, doc2.ID, entity.DocumentStatusAwaitingInput)
+		})
+
+		resp, body := env.viewerClient().GET(
+			"/api/v1/documents?status=AWAITING_INPUT%2CREADY_TO_SIGN",
+		)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var docs []*entity.DocumentListItem
+		require.NoError(t, json.Unmarshal(body, &docs))
+		got := make(map[string]entity.DocumentStatus, len(docs))
+		for _, d := range docs {
+			if d.ID == doc1.ID || d.ID == doc2.ID {
+				got[d.ID] = d.Status
+			}
+		}
+		require.Contains(t, got, doc1.ID)
+		require.Contains(t, got, doc2.ID)
+		assert.Equal(t, entity.DocumentStatusAwaitingInput, got[doc1.ID])
+		assert.Equal(t, entity.DocumentStatusReadyToSign, got[doc2.ID])
+	})
+
+	t.Run("invalid status in filter returns 400", func(t *testing.T) {
+		resp, _ := env.viewerClient().GET("/api/v1/documents?status=AWAITING_INPUT%2CNOT_A_STATUS")
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
 	t.Run("search by title", func(t *testing.T) {
 		resp, body := env.viewerClient().GET("/api/v1/documents?search=List%20Doc%201")
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -300,6 +334,66 @@ func TestDocumentController_ListDocuments(t *testing.T) {
 		var docs []*entity.DocumentListItem
 		require.NoError(t, json.Unmarshal(body, &docs))
 		assert.LessOrEqual(t, len(docs), 1)
+	})
+
+	t.Run("filter by document type ids", func(t *testing.T) {
+		pool := testhelper.GetTestPool(t)
+		docTypeAlt := testhelper.CreateTestDocumentType(t, pool, env.tenantID, "OTHER_DT", "Employment Agreement")
+		t.Cleanup(func() { testhelper.CleanupDocumentType(t, pool, docTypeAlt) })
+
+		_, err := pool.Exec(context.Background(), `UPDATE execution.documents SET document_type_id = $2 WHERE id = $1`, doc2.ID, docTypeAlt)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_, _ = pool.Exec(context.Background(), `UPDATE execution.documents SET document_type_id = $2 WHERE id = $1`, doc2.ID, env.docTypeID)
+		})
+
+		q := url.Values{}
+		q.Set("documentTypeIds", env.docTypeID)
+		resp, body := env.viewerClient().GET("/api/v1/documents?" + q.Encode())
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var docs []*entity.DocumentListItem
+		require.NoError(t, json.Unmarshal(body, &docs))
+		ids := make(map[string]struct{}, len(docs))
+		for _, d := range docs {
+			ids[d.ID] = struct{}{}
+			if d.ID == doc1.ID || d.ID == doc2.ID {
+				assert.Equal(t, env.docTypeID, d.DocumentTypeID)
+			}
+		}
+		_, hasDoc1 := ids[doc1.ID]
+		_, hasDoc2 := ids[doc2.ID]
+		assert.True(t, hasDoc1)
+		assert.False(t, hasDoc2, "doc2 was reassigned to alternate document type")
+	})
+
+	t.Run("document type options", func(t *testing.T) {
+		pool := testhelper.GetTestPool(t)
+		docTypeAlt := testhelper.CreateTestDocumentType(t, pool, env.tenantID, "OPTS_DT", "Service Agreement")
+		t.Cleanup(func() { testhelper.CleanupDocumentType(t, pool, docTypeAlt) })
+		_, err := pool.Exec(context.Background(), `UPDATE execution.documents SET document_type_id = $2 WHERE id = $1`, doc2.ID, docTypeAlt)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_, _ = pool.Exec(context.Background(), `UPDATE execution.documents SET document_type_id = $2 WHERE id = $1`, doc2.ID, env.docTypeID)
+		})
+
+		resp, body := env.viewerClient().GET("/api/v1/documents/document-type-options")
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var opts []*entity.DocumentTypeFilterOption
+		require.NoError(t, json.Unmarshal(body, &opts))
+		assert.GreaterOrEqual(t, len(opts), 2)
+		seen := map[string]bool{}
+		for _, o := range opts {
+			seen[o.ID] = true
+		}
+		assert.True(t, seen[env.docTypeID])
+		assert.True(t, seen[docTypeAlt])
+	})
+
+	t.Run("invalid document type id returns 400", func(t *testing.T) {
+		resp, _ := env.viewerClient().GET("/api/v1/documents?documentTypeIds=not-a-uuid")
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 }
 

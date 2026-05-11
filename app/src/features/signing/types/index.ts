@@ -145,9 +145,15 @@ export interface SigningURLResponse {
   expiresAt?: string
 }
 
+export interface DocumentTypeFilterOption {
+  id: string
+  name: string
+}
+
 export interface DocumentListFilters {
   status?: string
   search?: string
+  documentTypeIds?: string[]
   page?: number
   pageSize?: number
 }

@@ -231,9 +231,13 @@ func buildDocumentFilters(filters port.DocumentFilters, startArgPos int) (string
 	var args []any
 	argPos := startArgPos
 
-	if filters.Status != nil {
-		query += fmt.Sprintf(" AND status = $%d", argPos)
-		args = append(args, *filters.Status)
+	if len(filters.Statuses) > 0 {
+		statusStrs := make([]string, len(filters.Statuses))
+		for i, s := range filters.Statuses {
+			statusStrs[i] = string(s)
+		}
+		query += fmt.Sprintf(" AND status = ANY($%d::document_status[])", argPos)
+		args = append(args, statusStrs)
 		argPos++
 	}
 
@@ -246,6 +250,12 @@ func buildDocumentFilters(filters port.DocumentFilters, startArgPos int) (string
 	if filters.TemplateVersionID != nil {
 		query += fmt.Sprintf(" AND template_version_id = $%d", argPos)
 		args = append(args, *filters.TemplateVersionID)
+		argPos++
+	}
+
+	if len(filters.DocumentTypeIDs) > 0 {
+		query += fmt.Sprintf(" AND d.document_type_id = ANY($%d)", argPos)
+		args = append(args, filters.DocumentTypeIDs)
 		argPos++
 	}
 
@@ -308,6 +318,28 @@ func (r *Repository) FindByWorkspace(ctx context.Context, workspaceID string, fi
 	}
 
 	return documents, nil
+}
+
+// ListDistinctDocumentTypesForWorkspace returns distinct document types present on workspace documents.
+func (r *Repository) ListDistinctDocumentTypesForWorkspace(ctx context.Context, workspaceID string) ([]*entity.DocumentTypeFilterOption, error) {
+	rows, err := r.pool.Query(ctx, queryListDistinctDocumentTypesForWorkspace, workspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("querying document type options: %w", err)
+	}
+	defer rows.Close()
+
+	var out []*entity.DocumentTypeFilterOption
+	for rows.Next() {
+		var opt entity.DocumentTypeFilterOption
+		if err := rows.Scan(&opt.ID, &opt.Name); err != nil {
+			return nil, fmt.Errorf("scanning document type option: %w", err)
+		}
+		out = append(out, &opt)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating document type options: %w", err)
+	}
+	return out, nil
 }
 
 // FindByClientExternalRef finds documents by the client's external reference ID.

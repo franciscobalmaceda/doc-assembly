@@ -125,4 +125,15 @@ const (
 	queryCountByWorkspace = `SELECT COUNT(*) FROM execution.documents WHERE workspace_id = $1`
 
 	queryCountByStatus = `SELECT COUNT(*) FROM execution.documents WHERE workspace_id = $1 AND status = $2`
+
+	queryListDistinctDocumentTypesForWorkspace = `
+		SELECT DISTINCT
+			d.document_type_id,
+			COALESCE(dt.name->>'en', dt.name->>'es', '') AS name
+		FROM execution.documents d
+		LEFT JOIN content.document_types dt ON dt.id = d.document_type_id
+		WHERE d.workspace_id = $1
+		  AND d.document_type_id IS NOT NULL
+		ORDER BY name ASC, d.document_type_id ASC
+	`
 )

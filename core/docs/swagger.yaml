@@ -612,6 +612,13 @@ definitions:
       recipientId:
         type: string
     type: object
+  github_com_rendis_doc-assembly_core_internal_core_entity.DocumentTypeFilterOption:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentListResponse:
     properties:
       clientExternalReferenceId:
@@ -4664,9 +4671,13 @@ paths:
         name: X-Workspace-ID
         required: true
         type: string
-      - description: Filter by status
+      - description: Filter by document status; comma-separated for multiple (OR)
         in: query
         name: status
+        type: string
+      - description: Comma-separated document type UUIDs (multi-select filter)
+        in: query
+        name: documentTypeIds
         type: string
       - description: Search by document title or signer recipient email (substring, case-insensitive)
         in: query
@@ -4731,6 +4742,36 @@ paths:
           schema:
             $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
       summary: Create and send document
+      tags:
+      - Documents
+  /api/v1/documents/document-type-options:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: header
+        name: X-Workspace-ID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_core_entity.DocumentTypeFilterOption'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      summary: List document type filter options
       tags:
       - Documents
   /api/v1/documents/{documentId}:
