@@ -71,6 +71,22 @@ func TestRepository_FindByWorkspace_EnrichedFields(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, items)
 
+	byEmail, err := repo.FindByWorkspace(ctx, workspaceID, port.DocumentFilters{
+		Search: "alice.repo",
+		Limit:  10,
+		Offset: 0,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, byEmail)
+	var foundByEmail *entity.DocumentListItem
+	for _, it := range byEmail {
+		if it.ID == docID {
+			foundByEmail = it
+			break
+		}
+	}
+	require.NotNil(t, foundByEmail, "search should match signer email substring, not title")
+
 	var got *entity.DocumentListItem
 	for _, it := range items {
 		if it.ID == docID {

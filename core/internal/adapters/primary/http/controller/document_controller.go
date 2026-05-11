@@ -98,7 +98,7 @@ func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup) {
 // @Produce json
 // @Param X-Workspace-ID header string true "Workspace ID"
 // @Param status query string false "Filter by status"
-// @Param search query string false "Search by title"
+// @Param search query string false "Search by document title or signer recipient email (substring, case-insensitive)"
 // @Param limit query int false "Limit results"
 // @Param offset query int false "Offset for pagination"
 // @Success 200 {array} dto.DocumentListResponse

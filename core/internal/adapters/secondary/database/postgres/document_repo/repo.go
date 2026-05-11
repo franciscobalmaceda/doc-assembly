@@ -250,7 +250,18 @@ func buildDocumentFilters(filters port.DocumentFilters, startArgPos int) (string
 	}
 
 	if filters.Search != "" {
-		query += fmt.Sprintf(" AND title ILIKE $%d", argPos)
+		query += fmt.Sprintf(
+			` AND (
+				d.title ILIKE $%[1]d
+				OR EXISTS (
+					SELECT 1
+					FROM execution.document_recipients dr
+					WHERE dr.document_id = d.id
+						AND dr.email ILIKE $%[1]d
+				)
+			)`,
+			argPos,
+		)
 		args = append(args, "%"+filters.Search+"%")
 		argPos++
 	}

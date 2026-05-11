@@ -276,6 +276,23 @@ func TestDocumentController_ListDocuments(t *testing.T) {
 		assert.GreaterOrEqual(t, len(docs), 1)
 	})
 
+	t.Run("search by signer email substring", func(t *testing.T) {
+		resp, body := env.viewerClient().GET("/api/v1/documents?search=alice%40test.com")
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var docs []*entity.DocumentListItem
+		require.NoError(t, json.Unmarshal(body, &docs))
+		require.NotEmpty(t, docs)
+		found := false
+		for _, d := range docs {
+			if d.ID == doc1.ID {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "expected doc1 to match recipient alice@test.com")
+	})
+
 	t.Run("pagination", func(t *testing.T) {
 		resp, body := env.viewerClient().GET("/api/v1/documents?limit=1&offset=0")
 		assert.Equal(t, http.StatusOK, resp.StatusCode)

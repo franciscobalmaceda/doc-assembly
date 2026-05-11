@@ -230,6 +230,8 @@ Gestión de documentos dentro del workspace actual.
 
 **Archivo fuente**: `internal/adapters/primary/http/controller/document_controller.go`
 
+**Nota — GET `/documents`:** el query param opcional `search` filtra por subcadena (sin distinguir mayúsculas) en el **título del documento** o en el **email de cualquier recipient** asociado al documento en el workspace actual.
+
 ### Endpoints de Gallery (`/api/v1/workspace/gallery`)
 
 Gestión de imágenes del workspace para reutilizarlas en el editor y en render/PDF mediante referencias `storage://`.
