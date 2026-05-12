@@ -121,6 +121,20 @@ func (env *documentTestEnv) createDocument(t *testing.T, title string) entity.Do
 	return doc
 }
 
+// setDocumentStatusForDocumentController forces the status of a document directly in the database,
+// bypassing the service-level state machine. Used by controller integration tests that need to
+// exercise endpoints whose preconditions require a specific terminal status (e.g. deprecate).
+func setDocumentStatusForDocumentController(t *testing.T, documentID string, status entity.DocumentStatus) {
+	t.Helper()
+	_, err := testhelper.GetTestPool(t).Exec(
+		context.Background(),
+		`UPDATE execution.documents SET status = $2 WHERE id = $1`,
+		documentID,
+		status,
+	)
+	require.NoError(t, err)
+}
+
 // sandboxDocFixture holds sandbox workspace template/version/signer IDs for document API tests.
 type sandboxDocFixture struct {
 	workspaceID string
