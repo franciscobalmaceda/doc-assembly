@@ -224,6 +224,28 @@ func (r *Repository) FindByIDWithRecipients(ctx context.Context, id string) (*en
 	return result, nil
 }
 
+// appendDocumentSearchFilter appends title/recipient-email ILIKE search to query and args.
+func appendDocumentSearchFilter(query string, args []any, argPos int, search string) (string, []any, int) {
+	if search == "" {
+		return query, args, argPos
+	}
+	query += fmt.Sprintf(
+		` AND (
+				d.title ILIKE $%[1]d
+				OR EXISTS (
+					SELECT 1
+					FROM execution.document_recipients dr
+					WHERE dr.document_id = d.id
+						AND dr.email ILIKE $%[1]d
+				)
+			)`,
+		argPos,
+	)
+	args = append(args, "%"+search+"%")
+	argPos++
+	return query, args, argPos
+}
+
 // buildDocumentFilters builds the WHERE clause and args for document filters.
 // Returns the query suffix and args to append.
 func buildDocumentFilters(filters port.DocumentFilters, startArgPos int) (string, []any) {
@@ -259,22 +281,7 @@ func buildDocumentFilters(filters port.DocumentFilters, startArgPos int) (string
 		argPos++
 	}
 
-	if filters.Search != "" {
-		query += fmt.Sprintf(
-			` AND (
-				d.title ILIKE $%[1]d
-				OR EXISTS (
-					SELECT 1
-					FROM execution.document_recipients dr
-					WHERE dr.document_id = d.id
-						AND dr.email ILIKE $%[1]d
-				)
-			)`,
-			argPos,
-		)
-		args = append(args, "%"+filters.Search+"%")
-		argPos++
-	}
+	query, args, argPos = appendDocumentSearchFilter(query, args, argPos, filters.Search)
 
 	query += " ORDER BY created_at DESC"
 
