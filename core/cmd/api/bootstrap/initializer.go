@@ -417,6 +417,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		e.signingSessionAuth,
 		automationAPIKeyRepo,
 		frontendFS,
+		e.globalMiddleware,
 	)
 
 	// --- Background Scheduler ---
